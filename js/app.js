@@ -197,6 +197,9 @@ class App {
             <label class="plan-field-label">Rest&nbsp;(s)
               <input type="number" class="plan-field-input" data-field="restBetweenSets" data-idx="${i}" min="0" max="300" value="${item.restBetweenSets}" />
             </label>
+            <label class="plan-field-label">After&nbsp;(s)
+              <input type="number" class="plan-field-input" data-field="restAfterExercise" data-idx="${i}" min="0" max="300" value="${item.restAfterExercise ?? 60}" />
+            </label>
           </div>
         </div>
         <div class="plan-item-actions">
@@ -217,6 +220,7 @@ class App {
         if (field === 'sets') val = Math.min(20, Math.max(1, val));
         else if (field === 'reps') val = Math.min(50, Math.max(1, val));
         else if (field === 'restBetweenSets') val = Math.min(300, Math.max(0, val));
+        else if (field === 'restAfterExercise') val = Math.min(300, Math.max(0, val));
         input.value = val;
         this.workoutPlan[idx][field] = val;
       });
@@ -253,19 +257,27 @@ class App {
     // Sets / Reps steppers
     s.btnSetsMinus.addEventListener('click', () => {
       this.targetSets = Math.max(1, this.targetSets - 1);
-      s.setsDisplay.textContent = this.targetSets;
+      s.setsDisplay.value = this.targetSets;
     });
     s.btnSetsPlus.addEventListener('click', () => {
       this.targetSets = Math.min(20, this.targetSets + 1);
-      s.setsDisplay.textContent = this.targetSets;
+      s.setsDisplay.value = this.targetSets;
+    });
+    s.setsDisplay.addEventListener('change', () => {
+      this.targetSets = Math.min(20, Math.max(1, parseInt(s.setsDisplay.value) || 1));
+      s.setsDisplay.value = this.targetSets;
     });
     s.btnRepsMinus.addEventListener('click', () => {
       this.targetReps = Math.max(1, this.targetReps - 1);
-      s.repsDisplay.textContent = this.targetReps;
+      s.repsDisplay.value = this.targetReps;
     });
     s.btnRepsPlus.addEventListener('click', () => {
       this.targetReps = Math.min(50, this.targetReps + 1);
-      s.repsDisplay.textContent = this.targetReps;
+      s.repsDisplay.value = this.targetReps;
+    });
+    s.repsDisplay.addEventListener('change', () => {
+      this.targetReps = Math.min(50, Math.max(1, parseInt(s.repsDisplay.value) || 1));
+      s.repsDisplay.value = this.targetReps;
     });
 
     // Rest time inputs: type or use +/- (±10 s per click)
@@ -319,8 +331,8 @@ class App {
       this.targetSets = preset.sets;
       this.targetReps = preset.reps;
       this.restBetweenSets = preset.restBetweenSets ?? DEFAULT_REST_BETWEEN_SETS;
-      s.setsDisplay.textContent = this.targetSets;
-      s.repsDisplay.textContent = this.targetReps;
+      s.setsDisplay.value = this.targetSets;
+      s.repsDisplay.value = this.targetReps;
       s.restSetsInput.value = this.restBetweenSets;
       this._updateTips();
     });
@@ -340,6 +352,7 @@ class App {
         sets: this.targetSets,
         reps: this.targetReps,
         restBetweenSets: this.restBetweenSets,
+        restAfterExercise: this.restBetweenExercises,
       });
       this._renderPlanList();
       this._toast('Added to plan!');
@@ -432,6 +445,8 @@ class App {
     } else {
       this.exerciseId = this.setup.exerciseSelect.value;
       // Sync in case user typed without blurring
+      this.targetSets = Math.min(20, Math.max(1, parseInt(this.setup.setsDisplay.value) || 1));
+      this.targetReps = Math.min(50, Math.max(1, parseInt(this.setup.repsDisplay.value) || 1));
       this.restBetweenSets = Math.min(300, Math.max(0, parseInt(this.setup.restSetsInput.value) || 0));
       this.restBetweenExercises = Math.min(300, Math.max(0, parseInt(this.setup.restExercisesInput.value) || 0));
     }
@@ -522,28 +537,16 @@ class App {
 
   _showRest() {
     this.rest.setDone.textContent = `Set ${this.currentSet} of ${this.targetSets} complete!`;
-    this.rest.tip.textContent = 'Rest up, next set coming!';
+    this.rest.tip.textContent = 'Rest up — next set coming!';
     this.rest.nextExercise.style.display = 'none';
-    this.restRemaining = this.restBetweenSets;
-    this.rest.countdown.textContent = this.restRemaining;
-    this._showScreen('rest');
-
-    if (this.restBetweenSets <= 0) {
-      setTimeout(() => this._endRest(), 300);
-      return;
-    }
-
-    this.restTimer = setInterval(() => {
-      this.restRemaining--;
-      this.rest.countdown.textContent = this.restRemaining;
-      if (this.restRemaining <= 0) this._endRest();
-    }, 1000);
+    this._startRest(this.restBetweenSets);
   }
 
   _showExerciseTransition() {
     this._recordPlanResult();
     const nextItem = this.workoutPlan[this.planIndex + 1];
     const nextEx = EXERCISES.find(e => e.id === nextItem.exerciseId);
+    const duration = this.workoutPlan[this.planIndex].restAfterExercise ?? this.restBetweenExercises;
 
     this.rest.setDone.textContent = `Exercise ${this.planIndex + 1} / ${this.workoutPlan.length} complete!`;
     this.rest.tip.textContent = 'Prepare for the next exercise!';
@@ -551,11 +554,17 @@ class App {
     this.rest.nextExercise.style.display = '';
     this._isExerciseTransition = true;
 
-    this.restRemaining = this.restBetweenExercises;
+    this._startRest(duration);
+  }
+
+  _startRest(totalSeconds) {
+    clearInterval(this.restTimer);
+    this.restRemaining = totalSeconds;
     this.rest.countdown.textContent = this.restRemaining;
+    this._updateRestRing(totalSeconds, totalSeconds);
     this._showScreen('rest');
 
-    if (this.restBetweenExercises <= 0) {
+    if (totalSeconds <= 0) {
       setTimeout(() => this._endRest(), 300);
       return;
     }
@@ -563,8 +572,17 @@ class App {
     this.restTimer = setInterval(() => {
       this.restRemaining--;
       this.rest.countdown.textContent = this.restRemaining;
+      this._updateRestRing(this.restRemaining, totalSeconds);
       if (this.restRemaining <= 0) this._endRest();
     }, 1000);
+  }
+
+  _updateRestRing(remaining, total) {
+    const ring = document.getElementById('rest-ring-progress');
+    if (!ring) return;
+    const C = 326.73;
+    const offset = total > 0 ? C * (1 - remaining / total) : 0;
+    ring.style.strokeDashoffset = offset;
   }
 
   _endRest() {

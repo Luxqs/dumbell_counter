@@ -40,7 +40,7 @@
                 <label>Sets</label>
                 <div class="stepper-row">
                   <button class="btn-stepper" id="btn-sets-minus">−</button>
-                  <span class="stepper-value" id="sets-display">3</span>
+                  <input type="number" class="stepper-value" id="sets-display" value="3" min="1" max="20" />
                   <button class="btn-stepper" id="btn-sets-plus">+</button>
                 </div>
               </div>
@@ -48,7 +48,7 @@
                 <label>Reps</label>
                 <div class="stepper-row">
                   <button class="btn-stepper" id="btn-reps-minus">−</button>
-                  <span class="stepper-value" id="reps-display">12</span>
+                  <input type="number" class="stepper-value" id="reps-display" value="12" min="1" max="50" />
                   <button class="btn-stepper" id="btn-reps-plus">+</button>
                 </div>
               </div>
@@ -226,8 +226,14 @@
     <div class="rest-inner">
       <p class="rest-set-done" id="rest-set-done">Set 1 complete!</p>
       <div class="rest-timer-ring">
-        <div class="rest-countdown" id="rest-countdown">30</div>
-        <div class="rest-label">seconds</div>
+        <svg class="rest-ring-svg" viewBox="0 0 120 120" fill="none" aria-hidden="true">
+          <circle class="rest-ring-track" cx="60" cy="60" r="52"/>
+          <circle class="rest-ring-progress" id="rest-ring-progress" cx="60" cy="60" r="52"/>
+        </svg>
+        <div class="rest-ring-content">
+          <div class="rest-countdown" id="rest-countdown">30</div>
+          <div class="rest-label">seconds</div>
+        </div>
       </div>
       <p class="rest-tip" id="rest-tip">Rest up, next set coming!</p>
       <p class="rest-next-exercise" id="rest-next-exercise" style="display:none;"></p>

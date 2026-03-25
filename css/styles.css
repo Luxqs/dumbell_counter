@@ -26,6 +26,10 @@ html, body {
 }
 
 /* ── Screen system ───────────────────────────────────────────────────────── */
+@keyframes screenFadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 .screen {
   display: none;
   min-height: 100vh;
@@ -33,7 +37,7 @@ html, body {
   align-items: center;
   padding: 24px 16px 40px;
 }
-.screen.active { display: flex; }
+.screen.active { display: flex; animation: screenFadeIn .22s ease; }
 
 .screen-inner {
   width: 100%;
@@ -41,9 +45,12 @@ html, body {
 }
 
 /* ── Typography ──────────────────────────────────────────────────────────── */
-h1 { font-size: 1.75rem; font-weight: 700; }
+h1 { font-size: 1.75rem; font-weight: 700; line-height: 1.2; }
 h2 { font-size: 1.25rem; font-weight: 600; }
-h3 { font-size: 1rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+h3 { font-size: .78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em; }
+
+/* ── Focus ───────────────────────────────────────────────────────────────── */
+*:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; border-radius: 4px; }
 
 /* ── App Header ──────────────────────────────────────────────────────────── */
 .app-header {
@@ -61,8 +68,14 @@ h3 { font-size: 1rem; font-weight: 600; color: var(--text-muted); text-transform
   border-radius: var(--radius-lg);
   padding: 20px;
   margin-bottom: 16px;
+  transition: border-color .2s;
 }
-.card-title { margin-bottom: 14px; }
+.card:hover { border-color: rgba(34,197,94,.2); }
+.card-title {
+  margin-bottom: 14px;
+  border-left: 3px solid var(--primary);
+  padding-left: 10px;
+}
 
 /* ── Form elements ───────────────────────────────────────────────────────── */
 select, input[type="text"] {
@@ -76,7 +89,15 @@ select, input[type="text"] {
   outline: none;
   transition: border-color .2s;
 }
-select:focus, input[type="text"]:focus { border-color: var(--primary); }
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238892a4' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+}
+select:focus, input[type="text"]:focus, input[type="number"]:focus { border-color: var(--primary); }
 select option { background: var(--surface2); }
 
 /* ── Stepper ─────────────────────────────────────────────────────────────── */
@@ -91,7 +112,22 @@ select option { background: var(--surface2); }
 }
 .stepper label { display: block; font-size: .78rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 10px; }
 .stepper-row { display: flex; align-items: center; justify-content: center; gap: 16px; }
-.stepper-value { font-size: 2rem; font-weight: 700; min-width: 44px; color: var(--primary); }
+.stepper-value { font-size: 2rem; font-weight: 700; min-width: 44px; color: var(--primary); display: block; text-align: center; }
+/* When stepper-value is a number input */
+input.stepper-value {
+  width: 64px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid var(--primary);
+  border-radius: 0;
+  padding: 2px 0;
+  outline: none;
+  -moz-appearance: textfield;
+  transition: border-color .2s;
+}
+input.stepper-value:focus { border-bottom-color: var(--accent); }
+input.stepper-value::-webkit-outer-spin-button,
+input.stepper-value::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .btn-stepper {
   width: 36px; height: 36px;
   border-radius: 50%;
@@ -140,8 +176,8 @@ select option { background: var(--surface2); }
 .btn:active { transform: scale(.97); }
 .btn:disabled { opacity: .4; cursor: not-allowed; }
 
-.btn-primary   { background: var(--primary); color: #000; width: 100%; padding: 16px; font-size: 1.1rem; border-radius: var(--radius-lg); }
-.btn-primary:hover { opacity: .9; }
+.btn-primary   { background: linear-gradient(135deg, var(--primary-dark), var(--primary)); color: #000; width: 100%; padding: 16px; font-size: 1.1rem; border-radius: var(--radius-lg); box-shadow: 0 4px 14px rgba(34,197,94,.25); }
+.btn-primary:hover { filter: brightness(1.08); box-shadow: 0 6px 20px rgba(34,197,94,.35); }
 .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
 .btn-secondary:hover { border-color: var(--primary); color: var(--primary); }
 .btn-accent    { background: var(--accent); color: #fff; }
@@ -310,20 +346,45 @@ select option { background: var(--surface2); }
 /* ── Rest Screen ─────────────────────────────────────────────────────────── */
 #screen-rest { justify-content: center; text-align: center; gap: 0; }
 .rest-inner { width: 100%; max-width: 360px; }
-.rest-set-done { color: var(--primary); font-size: 1.1rem; font-weight: 600; margin-bottom: 32px; }
+.rest-set-done { color: var(--primary); font-size: 1.1rem; font-weight: 600; margin-bottom: 28px; }
+
+/* SVG countdown ring */
 .rest-timer-ring {
+  position: relative;
   width: 160px; height: 160px;
-  border-radius: 50%;
-  border: 6px solid var(--primary);
+  margin: 0 auto 28px;
+}
+.rest-ring-svg {
+  width: 160px; height: 160px;
+  transform: rotate(-90deg);
+  display: block;
+}
+.rest-ring-track {
+  stroke: var(--surface2);
+  stroke-width: 8;
+  fill: none;
+}
+.rest-ring-progress {
+  stroke: var(--primary);
+  stroke-width: 8;
+  fill: none;
+  stroke-linecap: round;
+  stroke-dasharray: 326.73;
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 1s linear;
+  filter: drop-shadow(0 0 6px rgba(34,197,94,.5));
+}
+.rest-ring-content {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 28px;
-  box-shadow: 0 0 30px rgba(34,197,94,.25);
+  pointer-events: none;
 }
-.rest-countdown { font-size: 3rem; font-weight: 800; color: var(--primary); }
-.rest-label { font-size: .78rem; color: var(--text-muted); text-transform: uppercase; }
+.rest-countdown { font-size: 3rem; font-weight: 800; color: var(--primary); line-height: 1; }
+.rest-label { font-size: .72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; margin-top: 4px; }
 .rest-tip { color: var(--text-muted); font-size: .9rem; margin-bottom: 28px; }
 
 /* ── Complete Screen ─────────────────────────────────────────────────────── */
