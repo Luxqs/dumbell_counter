@@ -50,6 +50,29 @@
         </div>
       </div>
 
+      <!-- Rest Times -->
+      <div class="card">
+        <h3 class="card-title">Rest Times</h3>
+        <div class="steppers">
+          <div class="stepper">
+            <label>Between Sets (s)</label>
+            <div class="stepper-row">
+              <button class="btn-stepper" id="btn-rest-sets-minus">−</button>
+              <span class="stepper-value" id="rest-sets-display">30</span>
+              <button class="btn-stepper" id="btn-rest-sets-plus">+</button>
+            </div>
+          </div>
+          <div class="stepper">
+            <label>Between Reps (s)</label>
+            <div class="stepper-row">
+              <button class="btn-stepper" id="btn-rest-reps-minus">−</button>
+              <span class="stepper-value" id="rest-reps-display">0</span>
+              <button class="btn-stepper" id="btn-rest-reps-plus">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Presets -->
       <div class="card">
         <h3 class="card-title">Presets</h3>
@@ -65,7 +88,26 @@
         </div>
       </div>
 
-      <button class="btn btn-primary" id="btn-start">▶ Start Workout</button>
+      <!-- Workout Plan -->
+      <div class="card">
+        <h3 class="card-title">Workout Plan</h3>
+        <button class="btn btn-accent" id="btn-add-to-plan" style="width:100%; margin-bottom:12px;">+ Add Current Exercise to Plan</button>
+        <div id="plan-list" class="plan-list"></div>
+        <div style="margin-top:12px;">
+          <div class="preset-row" style="margin-bottom:8px;">
+            <input type="text" id="plan-name" placeholder="Plan name…" maxlength="40" />
+            <button class="btn btn-accent" id="btn-save-plan">💾</button>
+          </div>
+          <select id="plan-select" style="margin-bottom:8px;"></select>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-secondary" id="btn-load-plan" style="flex:1;">Load Plan</button>
+            <button class="btn btn-danger" id="btn-delete-plan" style="flex:1;">Delete Plan</button>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="btn-start-plan" style="display:none; margin-top:12px;">▶ Start Plan Workout</button>
+      </div>
+
+      <button class="btn btn-primary" id="btn-start">▶ Start Single Exercise</button>
 
     </div>
   </section>
@@ -109,6 +151,11 @@
         <div class="stat-label">Reps</div>
         <div class="stat-value" id="rep-display">0 / 12</div>
       </div>
+    </div>
+
+    <!-- Rep rest indicator -->
+    <div id="rep-rest-badge" class="rep-rest-badge" style="display:none;">
+      Next rep in <span id="rep-rest-countdown">0</span>s
     </div>
 
     <!-- Big rep count -->
@@ -162,7 +209,8 @@
         <div class="rest-countdown" id="rest-countdown">30</div>
         <div class="rest-label">seconds</div>
       </div>
-      <p class="rest-tip">Rest up, next set coming!</p>
+      <p class="rest-tip" id="rest-tip">Rest up, next set coming!</p>
+      <p class="rest-next-exercise" id="rest-next-exercise" style="display:none;"></p>
       <button class="btn btn-primary" id="btn-skip-rest">Skip Rest ▶</button>
     </div>
   </section>
@@ -176,7 +224,8 @@
       <div class="complete-trophy">🏆</div>
       <h1>Workout Complete!</h1>
 
-      <div class="complete-stats">
+      <!-- Single exercise stats -->
+      <div class="complete-stats" id="complete-single-stats">
         <div class="complete-stat">
           <span>Exercise</span>
           <span id="complete-exercise">—</span>
@@ -189,6 +238,10 @@
           <span>Total reps</span>
           <span id="complete-reps">—</span>
         </div>
+      </div>
+      <!-- Plan summary stats -->
+      <div class="complete-plan-stats" id="complete-plan-stats" style="display:none;">
+        <div id="plan-summary-list"></div>
       </div>
 
       <div class="complete-actions">

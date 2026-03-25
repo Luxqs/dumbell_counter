@@ -167,10 +167,41 @@ class WorkoutManager {
 
   get(name) { return this._load()[name] || null; }
 
-  save(name, { exerciseId, sets, reps }) {
+  save(name, { exerciseId, sets, reps, restBetweenSets, restBetweenReps }) {
     if (!name.trim()) return false;
     const data = this._load();
-    data[name.trim()] = { exerciseId, sets, reps, savedAt: Date.now() };
+    data[name.trim()] = { exerciseId, sets, reps, restBetweenSets, restBetweenReps, savedAt: Date.now() };
+    this._save(data);
+    return true;
+  }
+
+  delete(name) {
+    const data = this._load();
+    delete data[name];
+    this._save(data);
+  }
+}
+
+
+// ─── Workout Plan Manager ─────────────────────────────────────────────────────
+
+class WorkoutPlanManager {
+  constructor() { this.KEY = 'dc_plans_v1'; }
+
+  _load() {
+    try { return JSON.parse(localStorage.getItem(this.KEY)) || {}; } catch { return {}; }
+  }
+
+  _save(data) { localStorage.setItem(this.KEY, JSON.stringify(data)); }
+
+  list() { return Object.keys(this._load()); }
+
+  get(name) { return this._load()[name] || null; }
+
+  save(name, plan) {
+    if (!name.trim()) return false;
+    const data = this._load();
+    data[name.trim()] = { plan, savedAt: Date.now() };
     this._save(data);
     return true;
   }

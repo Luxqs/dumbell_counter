@@ -355,6 +355,79 @@ select option { background: var(--surface2); }
 }
 #toast.show { transform: translateX(-50%) translateY(0); }
 
+/* ── Plan List ───────────────────────────────────────────────────────────── */
+.plan-list { display: flex; flex-direction: column; gap: 8px; min-height: 40px; }
+.plan-empty { color: var(--text-muted); font-size: .88rem; text-align: center; padding: 12px 0; }
+.plan-item {
+  display: flex;
+  align-items: center;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  gap: 10px;
+}
+.plan-item-num {
+  color: var(--accent);
+  font-size: .78rem;
+  font-weight: 700;
+  min-width: 18px;
+  text-align: center;
+}
+.plan-item-info { flex: 1; min-width: 0; }
+.plan-item-name { font-size: .95rem; font-weight: 600; }
+.plan-item-meta { font-size: .75rem; color: var(--text-muted); margin-top: 2px; }
+.plan-item-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.btn-icon {
+  width: 28px; height: 28px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: .85rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s, color .15s;
+}
+.btn-icon:hover { background: var(--primary); color: #000; border-color: var(--primary); }
+.btn-icon.danger:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
+
+/* ── Rep Rest Badge ──────────────────────────────────────────────────────── */
+.rep-rest-badge {
+  max-width: 640px;
+  margin: 0 auto 12px;
+  background: rgba(99,102,241,.15);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 8px 16px;
+  text-align: center;
+  font-size: .9rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ── Rest screen: next exercise label ────────────────────────────────────── */
+.rest-next-exercise {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 16px;
+}
+
+/* ── Plan Summary on Complete Screen ─────────────────────────────────────── */
+.complete-plan-stats { margin-bottom: 28px; }
+.plan-summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: .95rem;
+}
+.plan-summary-item:last-child { border-bottom: none; }
+.plan-summary-name { font-weight: 600; }
+.plan-summary-meta { color: var(--primary); font-weight: 700; font-size: .9rem; }
+
 /* ── Responsive tweaks ───────────────────────────────────────────────────── */
 @media (max-width: 400px) {
   .steppers { gap: 10px; }

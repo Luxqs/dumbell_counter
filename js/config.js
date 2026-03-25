@@ -89,6 +89,7 @@ const SKELETON = [
   ['right_knee', 'right_ankle'],
 ];
 
-const REST_SECONDS = 30;
+const DEFAULT_REST_BETWEEN_SETS = 30;
+const DEFAULT_REST_BETWEEN_REPS = 0;
 const MIN_KEYPOINT_CONFIDENCE = 0.3;
 const ANGLE_SMOOTHING_FRAMES = 6;
