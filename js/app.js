@@ -10,7 +10,6 @@ class App {
     this.targetSets = 3;
     this.targetReps = 12;
     this.restBetweenSets = DEFAULT_REST_BETWEEN_SETS;
-    this.restBetweenReps = DEFAULT_REST_BETWEEN_REPS;
 
     // Workout state
     this.currentSet = 1;
@@ -29,9 +28,6 @@ class App {
     this.isRunningPlan = false;
     this.planResults = [];
     this._isExerciseTransition = false;
-
-    // Rep rest
-    this._repRestUntil = 0;
 
     // Flash effect timeout
     this._flashTimeout = null;
@@ -65,13 +61,10 @@ class App {
       btnSetsPlus: $('btn-sets-plus'),
       btnRepsMinus: $('btn-reps-minus'),
       btnRepsPlus: $('btn-reps-plus'),
-      // Rest times
+      // Rest time
       restSetsInput: $('rest-sets-input'),
       btnRestSetsMinus: $('btn-rest-sets-minus'),
       btnRestSetsPlus: $('btn-rest-sets-plus'),
-      restRepsInput: $('rest-reps-input'),
-      btnRestRepsMinus: $('btn-rest-reps-minus'),
-      btnRestRepsPlus: $('btn-rest-reps-plus'),
       // Presets
       presetName: $('preset-name'),
       btnSavePreset: $('btn-save-preset'),
@@ -106,8 +99,6 @@ class App {
       btnNext: $('btn-next-set'),
       btnBack: $('btn-back'),
       flashOverlay: $('flash-overlay'),
-      repRestBadge: $('rep-rest-badge'),
-      repRestCountdown: $('rep-rest-countdown'),
     };
     this.rest = {
       setDone: $('rest-set-done'),
@@ -192,7 +183,17 @@ class App {
         <div class="plan-item-num">${i + 1}</div>
         <div class="plan-item-info">
           <div class="plan-item-name">${ex?.name || item.exerciseId}</div>
-          <div class="plan-item-meta">${item.sets} sets × ${item.reps} reps &nbsp;|&nbsp; Set rest: ${item.restBetweenSets}s &nbsp;|&nbsp; Rep rest: ${item.restBetweenReps}s</div>
+          <div class="plan-item-fields">
+            <label class="plan-field-label">Sets
+              <input type="number" class="plan-field-input" data-field="sets" data-idx="${i}" min="1" max="20" value="${item.sets}" />
+            </label>
+            <label class="plan-field-label">Reps
+              <input type="number" class="plan-field-input" data-field="reps" data-idx="${i}" min="1" max="50" value="${item.reps}" />
+            </label>
+            <label class="plan-field-label">Rest&nbsp;(s)
+              <input type="number" class="plan-field-input" data-field="restBetweenSets" data-idx="${i}" min="0" max="300" value="${item.restBetweenSets}" />
+            </label>
+          </div>
         </div>
         <div class="plan-item-actions">
           <button class="btn-icon" data-action="up" data-idx="${i}" title="Move up">↑</button>
@@ -203,18 +204,35 @@ class App {
       list.appendChild(div);
     });
 
-    list.querySelectorAll('.btn-icon').forEach(btn => {
+    // Inline field editing — update model directly, no re-render (preserves focus)
+    list.querySelectorAll('.plan-field-input').forEach(input => {
+      input.addEventListener('change', () => {
+        const idx = parseInt(input.dataset.idx);
+        const field = input.dataset.field;
+        let val = parseInt(input.value) || 0;
+        if (field === 'sets') val = Math.min(20, Math.max(1, val));
+        else if (field === 'reps') val = Math.min(50, Math.max(1, val));
+        else if (field === 'restBetweenSets') val = Math.min(300, Math.max(0, val));
+        input.value = val;
+        this.workoutPlan[idx][field] = val;
+      });
+    });
+
+    // Move / remove buttons
+    list.querySelectorAll('.btn-icon[data-action]').forEach(btn => {
       btn.addEventListener('click', () => {
         const action = btn.dataset.action;
         const idx = parseInt(btn.dataset.idx);
         if (action === 'up' && idx > 0) {
           [this.workoutPlan[idx], this.workoutPlan[idx - 1]] = [this.workoutPlan[idx - 1], this.workoutPlan[idx]];
+          this._renderPlanList();
         } else if (action === 'down' && idx < this.workoutPlan.length - 1) {
           [this.workoutPlan[idx], this.workoutPlan[idx + 1]] = [this.workoutPlan[idx + 1], this.workoutPlan[idx]];
+          this._renderPlanList();
         } else if (action === 'remove') {
           this.workoutPlan.splice(idx, 1);
+          this._renderPlanList();
         }
-        this._renderPlanList();
       });
     });
 
@@ -246,9 +264,8 @@ class App {
       s.repsDisplay.textContent = this.targetReps;
     });
 
-    // Rest time inputs (+/- buttons + direct typing)
+    // Rest time input: type or use +/- (±10 s per click)
     const clampRest = v => Math.min(300, Math.max(0, parseInt(v) || 0));
-
     s.btnRestSetsMinus.addEventListener('click', () => {
       this.restBetweenSets = clampRest(this.restBetweenSets - 10);
       s.restSetsInput.value = this.restBetweenSets;
@@ -262,19 +279,6 @@ class App {
       s.restSetsInput.value = this.restBetweenSets;
     });
 
-    s.btnRestRepsMinus.addEventListener('click', () => {
-      this.restBetweenReps = clampRest(this.restBetweenReps - 1);
-      s.restRepsInput.value = this.restBetweenReps;
-    });
-    s.btnRestRepsPlus.addEventListener('click', () => {
-      this.restBetweenReps = clampRest(this.restBetweenReps + 1);
-      s.restRepsInput.value = this.restBetweenReps;
-    });
-    s.restRepsInput.addEventListener('change', () => {
-      this.restBetweenReps = clampRest(s.restRepsInput.value);
-      s.restRepsInput.value = this.restBetweenReps;
-    });
-
     // Presets
     s.btnSavePreset.addEventListener('click', () => {
       const name = s.presetName.value.trim();
@@ -284,7 +288,6 @@ class App {
         sets: this.targetSets,
         reps: this.targetReps,
         restBetweenSets: this.restBetweenSets,
-        restBetweenReps: this.restBetweenReps,
       });
       this._populatePresets();
       s.presetName.value = '';
@@ -298,11 +301,9 @@ class App {
       this.targetSets = preset.sets;
       this.targetReps = preset.reps;
       this.restBetweenSets = preset.restBetweenSets ?? DEFAULT_REST_BETWEEN_SETS;
-      this.restBetweenReps = preset.restBetweenReps ?? DEFAULT_REST_BETWEEN_REPS;
       s.setsDisplay.textContent = this.targetSets;
       s.repsDisplay.textContent = this.targetReps;
       s.restSetsInput.value = this.restBetweenSets;
-      s.restRepsInput.value = this.restBetweenReps;
       this._updateTips();
     });
 
@@ -321,7 +322,6 @@ class App {
         sets: this.targetSets,
         reps: this.targetReps,
         restBetweenSets: this.restBetweenSets,
-        restBetweenReps: this.restBetweenReps,
       });
       this._renderPlanList();
       this._toast('Added to plan!');
@@ -411,17 +411,13 @@ class App {
       this.targetSets = item.sets;
       this.targetReps = item.reps;
       this.restBetweenSets = item.restBetweenSets;
-      this.restBetweenReps = item.restBetweenReps;
     } else {
       this.exerciseId = this.setup.exerciseSelect.value;
-      // Sync rest values from inputs (covers case where user typed but didn't blur)
-      const clamp = v => Math.min(300, Math.max(0, parseInt(v) || 0));
-      this.restBetweenSets = clamp(this.setup.restSetsInput.value);
-      this.restBetweenReps = clamp(this.setup.restRepsInput.value);
+      // Sync in case user typed without blurring
+      this.restBetweenSets = Math.min(300, Math.max(0, parseInt(this.setup.restSetsInput.value) || 0));
     }
 
     this.currentSet = 1;
-    this._repRestUntil = 0;
     this._isExerciseTransition = false;
     this.counter = new RepCounter(this.exerciseId);
     this.counter.reset();
@@ -472,17 +468,6 @@ class App {
 
     this.detector.drawSkeleton(this.workout.canvas, video, pose, this.exerciseId);
 
-    // Handle between-rep rest period
-    if (Date.now() < this._repRestUntil) {
-      const remaining = Math.ceil((this._repRestUntil - Date.now()) / 1000);
-      this.workout.repRestBadge.style.display = '';
-      this.workout.repRestCountdown.textContent = remaining;
-      this._loop();
-      return;
-    } else {
-      this.workout.repRestBadge.style.display = 'none';
-    }
-
     if (pose) {
       const result = this.counter.update(pose, this.detector);
       this._updateCountUI(result);
@@ -490,15 +475,8 @@ class App {
       if (result.counted) {
         this._flashRep();
         if (result.reps >= this.targetReps) {
-          // Target reached — clear any rep rest and advance to next set
-          this._repRestUntil = 0;
-          this.workout.repRestBadge.style.display = 'none';
           setTimeout(() => this._completeSet(), 400);
           return;
-        }
-        // Not yet at target — apply between-rep rest if configured
-        if (this.restBetweenReps > 0) {
-          this._repRestUntil = Date.now() + this.restBetweenReps * 1000;
         }
       }
     }
@@ -511,8 +489,6 @@ class App {
   _completeSet() {
     cancelAnimationFrame(this.animationId);
     this.isRunning = false;
-    this._repRestUntil = 0;
-    this.workout.repRestBadge.style.display = 'none';
 
     if (this.currentSet >= this.targetSets) {
       if (this.isRunningPlan && this.planIndex < this.workoutPlan.length - 1) {
@@ -575,7 +551,6 @@ class App {
   _endRest() {
     clearInterval(this.restTimer);
     this.rest.nextExercise.style.display = 'none';
-    this._repRestUntil = 0;
 
     if (this._isExerciseTransition) {
       this._isExerciseTransition = false;
@@ -599,9 +574,7 @@ class App {
     this.targetSets = item.sets;
     this.targetReps = item.reps;
     this.restBetweenSets = item.restBetweenSets;
-    this.restBetweenReps = item.restBetweenReps;
     this.currentSet = 1;
-    this._repRestUntil = 0;
     this.counter = new RepCounter(this.exerciseId);
     this.counter.reset();
     this._showScreen('workout');
@@ -661,7 +634,6 @@ class App {
     this.isPaused = false;
     this.isRunningPlan = false;
     this._isExerciseTransition = false;
-    this._repRestUntil = 0;
     this._stopCamera();
     this._showScreen('setup');
   }
@@ -684,7 +656,6 @@ class App {
     }
     this.workout.title.textContent = title;
     this.workout.targetRepsDisplay.textContent = this.targetReps;
-    this.workout.repRestBadge.style.display = 'none';
     this._updateCountUI({ reps: 0, angle: 0, counted: false });
   }
 

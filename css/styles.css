@@ -416,19 +416,39 @@ select option { background: var(--surface2); }
 .btn-icon:hover { background: var(--primary); color: #000; border-color: var(--primary); }
 .btn-icon.danger:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
 
-/* ── Rep Rest Badge ──────────────────────────────────────────────────────── */
-.rep-rest-badge {
-  max-width: 640px;
-  margin: 0 auto 12px;
-  background: rgba(99,102,241,.15);
-  border: 1px solid var(--accent);
-  border-radius: var(--radius);
-  padding: 8px 16px;
-  text-align: center;
-  font-size: .9rem;
-  color: var(--accent);
-  font-weight: 600;
+/* ── Plan item inline fields ─────────────────────────────────────────────── */
+.plan-item-fields {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+  align-items: center;
 }
+.plan-field-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: .73rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.plan-field-input {
+  width: 52px;
+  text-align: center;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: .95rem;
+  font-weight: 700;
+  padding: 4px 2px;
+  outline: none;
+  -moz-appearance: textfield;
+}
+.plan-field-input:focus { border-color: var(--primary); color: var(--primary); }
+.plan-field-input::-webkit-outer-spin-button,
+.plan-field-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
 /* ── Rest screen: next exercise label ────────────────────────────────────── */
 .rest-next-exercise {
