@@ -66,10 +66,10 @@ class App {
       btnRepsMinus: $('btn-reps-minus'),
       btnRepsPlus: $('btn-reps-plus'),
       // Rest times
-      restSetsDisplay: $('rest-sets-display'),
+      restSetsInput: $('rest-sets-input'),
       btnRestSetsMinus: $('btn-rest-sets-minus'),
       btnRestSetsPlus: $('btn-rest-sets-plus'),
-      restRepsDisplay: $('rest-reps-display'),
+      restRepsInput: $('rest-reps-input'),
       btnRestRepsMinus: $('btn-rest-reps-minus'),
       btnRestRepsPlus: $('btn-rest-reps-plus'),
       // Presets
@@ -246,22 +246,33 @@ class App {
       s.repsDisplay.textContent = this.targetReps;
     });
 
-    // Rest time steppers
+    // Rest time inputs (+/- buttons + direct typing)
+    const clampRest = v => Math.min(300, Math.max(0, parseInt(v) || 0));
+
     s.btnRestSetsMinus.addEventListener('click', () => {
-      this.restBetweenSets = Math.max(0, this.restBetweenSets - 5);
-      s.restSetsDisplay.textContent = this.restBetweenSets;
+      this.restBetweenSets = clampRest(this.restBetweenSets - 10);
+      s.restSetsInput.value = this.restBetweenSets;
     });
     s.btnRestSetsPlus.addEventListener('click', () => {
-      this.restBetweenSets = Math.min(300, this.restBetweenSets + 5);
-      s.restSetsDisplay.textContent = this.restBetweenSets;
+      this.restBetweenSets = clampRest(this.restBetweenSets + 10);
+      s.restSetsInput.value = this.restBetweenSets;
     });
+    s.restSetsInput.addEventListener('change', () => {
+      this.restBetweenSets = clampRest(s.restSetsInput.value);
+      s.restSetsInput.value = this.restBetweenSets;
+    });
+
     s.btnRestRepsMinus.addEventListener('click', () => {
-      this.restBetweenReps = Math.max(0, this.restBetweenReps - 1);
-      s.restRepsDisplay.textContent = this.restBetweenReps;
+      this.restBetweenReps = clampRest(this.restBetweenReps - 1);
+      s.restRepsInput.value = this.restBetweenReps;
     });
     s.btnRestRepsPlus.addEventListener('click', () => {
-      this.restBetweenReps = Math.min(60, this.restBetweenReps + 1);
-      s.restRepsDisplay.textContent = this.restBetweenReps;
+      this.restBetweenReps = clampRest(this.restBetweenReps + 1);
+      s.restRepsInput.value = this.restBetweenReps;
+    });
+    s.restRepsInput.addEventListener('change', () => {
+      this.restBetweenReps = clampRest(s.restRepsInput.value);
+      s.restRepsInput.value = this.restBetweenReps;
     });
 
     // Presets
@@ -290,8 +301,8 @@ class App {
       this.restBetweenReps = preset.restBetweenReps ?? DEFAULT_REST_BETWEEN_REPS;
       s.setsDisplay.textContent = this.targetSets;
       s.repsDisplay.textContent = this.targetReps;
-      s.restSetsDisplay.textContent = this.restBetweenSets;
-      s.restRepsDisplay.textContent = this.restBetweenReps;
+      s.restSetsInput.value = this.restBetweenSets;
+      s.restRepsInput.value = this.restBetweenReps;
       this._updateTips();
     });
 
@@ -403,6 +414,10 @@ class App {
       this.restBetweenReps = item.restBetweenReps;
     } else {
       this.exerciseId = this.setup.exerciseSelect.value;
+      // Sync rest values from inputs (covers case where user typed but didn't blur)
+      const clamp = v => Math.min(300, Math.max(0, parseInt(v) || 0));
+      this.restBetweenSets = clamp(this.setup.restSetsInput.value);
+      this.restBetweenReps = clamp(this.setup.restRepsInput.value);
     }
 
     this.currentSet = 1;
@@ -474,12 +489,16 @@ class App {
 
       if (result.counted) {
         this._flashRep();
-        if (this.restBetweenReps > 0) {
-          this._repRestUntil = Date.now() + this.restBetweenReps * 1000;
-        }
         if (result.reps >= this.targetReps) {
+          // Target reached — clear any rep rest and advance to next set
+          this._repRestUntil = 0;
+          this.workout.repRestBadge.style.display = 'none';
           setTimeout(() => this._completeSet(), 400);
           return;
+        }
+        // Not yet at target — apply between-rep rest if configured
+        if (this.restBetweenReps > 0) {
+          this._repRestUntil = Date.now() + this.restBetweenReps * 1000;
         }
       }
     }
@@ -492,6 +511,8 @@ class App {
   _completeSet() {
     cancelAnimationFrame(this.animationId);
     this.isRunning = false;
+    this._repRestUntil = 0;
+    this.workout.repRestBadge.style.display = 'none';
 
     if (this.currentSet >= this.targetSets) {
       if (this.isRunningPlan && this.planIndex < this.workoutPlan.length - 1) {
@@ -554,6 +575,7 @@ class App {
   _endRest() {
     clearInterval(this.restTimer);
     this.rest.nextExercise.style.display = 'none';
+    this._repRestUntil = 0;
 
     if (this._isExerciseTransition) {
       this._isExerciseTransition = false;

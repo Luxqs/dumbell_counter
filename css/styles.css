@@ -355,6 +355,30 @@ select option { background: var(--surface2); }
 }
 #toast.show { transform: translateX(-50%) translateY(0); }
 
+/* ── Rest time number inputs ─────────────────────────────────────────────── */
+.rest-number-input {
+  width: 64px;
+  text-align: center;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--primary);
+  font-size: 1.5rem;
+  font-weight: 700;
+  padding: 4px 2px;
+  outline: none;
+  -moz-appearance: textfield;
+}
+.rest-number-input:focus { border-color: var(--primary); }
+.rest-number-input::-webkit-outer-spin-button,
+.rest-number-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.rest-time-hint {
+  font-size: .7rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 6px;
+}
+
 /* ── Plan List ───────────────────────────────────────────────────────────── */
 .plan-list { display: flex; flex-direction: column; gap: 8px; min-height: 40px; }
 .plan-empty { color: var(--text-muted); font-size: .88rem; text-align: center; padding: 12px 0; }

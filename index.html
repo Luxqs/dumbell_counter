@@ -55,20 +55,22 @@
         <h3 class="card-title">Rest Times</h3>
         <div class="steppers">
           <div class="stepper">
-            <label>Between Sets (s)</label>
+            <label>Between Sets</label>
             <div class="stepper-row">
               <button class="btn-stepper" id="btn-rest-sets-minus">−</button>
-              <span class="stepper-value" id="rest-sets-display">30</span>
+              <input type="number" class="rest-number-input" id="rest-sets-input" min="0" max="300" value="30" />
               <button class="btn-stepper" id="btn-rest-sets-plus">+</button>
             </div>
+            <div class="rest-time-hint">0 – 300 s &nbsp;(max 5 min)</div>
           </div>
           <div class="stepper">
-            <label>Between Reps (s)</label>
+            <label>Between Reps</label>
             <div class="stepper-row">
               <button class="btn-stepper" id="btn-rest-reps-minus">−</button>
-              <span class="stepper-value" id="rest-reps-display">0</span>
+              <input type="number" class="rest-number-input" id="rest-reps-input" min="0" max="300" value="0" />
               <button class="btn-stepper" id="btn-rest-reps-plus">+</button>
             </div>
+            <div class="rest-time-hint">0 – 300 s &nbsp;(max 5 min)</div>
           </div>
         </div>
       </div>
