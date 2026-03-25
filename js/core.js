@@ -167,10 +167,10 @@ class WorkoutManager {
 
   get(name) { return this._load()[name] || null; }
 
-  save(name, { exerciseId, sets, reps, restBetweenSets, restBetweenReps }) {
+  save(name, { exerciseId, sets, reps, restBetweenSets }) {
     if (!name.trim()) return false;
     const data = this._load();
-    data[name.trim()] = { exerciseId, sets, reps, restBetweenSets, restBetweenReps, savedAt: Date.now() };
+    data[name.trim()] = { exerciseId, sets, reps, restBetweenSets, savedAt: Date.now() };
     this._save(data);
     return true;
   }
