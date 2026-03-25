@@ -10,6 +10,7 @@ class App {
     this.targetSets = 3;
     this.targetReps = 12;
     this.restBetweenSets = DEFAULT_REST_BETWEEN_SETS;
+    this.restBetweenExercises = 60;
 
     // Workout state
     this.currentSet = 1;
@@ -61,10 +62,13 @@ class App {
       btnSetsPlus: $('btn-sets-plus'),
       btnRepsMinus: $('btn-reps-minus'),
       btnRepsPlus: $('btn-reps-plus'),
-      // Rest time
+      // Rest times
       restSetsInput: $('rest-sets-input'),
       btnRestSetsMinus: $('btn-rest-sets-minus'),
       btnRestSetsPlus: $('btn-rest-sets-plus'),
+      restExercisesInput: $('rest-exercises-input'),
+      btnRestExercisesMinus: $('btn-rest-exercises-minus'),
+      btnRestExercisesPlus: $('btn-rest-exercises-plus'),
       // Presets
       presetName: $('preset-name'),
       btnSavePreset: $('btn-save-preset'),
@@ -264,8 +268,9 @@ class App {
       s.repsDisplay.textContent = this.targetReps;
     });
 
-    // Rest time input: type or use +/- (±10 s per click)
+    // Rest time inputs: type or use +/- (±10 s per click)
     const clampRest = v => Math.min(300, Math.max(0, parseInt(v) || 0));
+
     s.btnRestSetsMinus.addEventListener('click', () => {
       this.restBetweenSets = clampRest(this.restBetweenSets - 10);
       s.restSetsInput.value = this.restBetweenSets;
@@ -277,6 +282,19 @@ class App {
     s.restSetsInput.addEventListener('change', () => {
       this.restBetweenSets = clampRest(s.restSetsInput.value);
       s.restSetsInput.value = this.restBetweenSets;
+    });
+
+    s.btnRestExercisesMinus.addEventListener('click', () => {
+      this.restBetweenExercises = clampRest(this.restBetweenExercises - 10);
+      s.restExercisesInput.value = this.restBetweenExercises;
+    });
+    s.btnRestExercisesPlus.addEventListener('click', () => {
+      this.restBetweenExercises = clampRest(this.restBetweenExercises + 10);
+      s.restExercisesInput.value = this.restBetweenExercises;
+    });
+    s.restExercisesInput.addEventListener('change', () => {
+      this.restBetweenExercises = clampRest(s.restExercisesInput.value);
+      s.restExercisesInput.value = this.restBetweenExercises;
     });
 
     // Presets
@@ -415,6 +433,7 @@ class App {
       this.exerciseId = this.setup.exerciseSelect.value;
       // Sync in case user typed without blurring
       this.restBetweenSets = Math.min(300, Math.max(0, parseInt(this.setup.restSetsInput.value) || 0));
+      this.restBetweenExercises = Math.min(300, Math.max(0, parseInt(this.setup.restExercisesInput.value) || 0));
     }
 
     this.currentSet = 1;
@@ -532,11 +551,11 @@ class App {
     this.rest.nextExercise.style.display = '';
     this._isExerciseTransition = true;
 
-    this.restRemaining = this.restBetweenSets;
+    this.restRemaining = this.restBetweenExercises;
     this.rest.countdown.textContent = this.restRemaining;
     this._showScreen('rest');
 
-    if (this.restBetweenSets <= 0) {
+    if (this.restBetweenExercises <= 0) {
       setTimeout(() => this._endRest(), 300);
       return;
     }

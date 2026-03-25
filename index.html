@@ -20,87 +20,108 @@
         <p>Camera-powered rep &amp; set tracking</p>
       </div>
 
-      <!-- Exercise selection -->
-      <div class="card">
-        <h3 class="card-title">Exercise</h3>
-        <select id="exercise-select"></select>
-        <div class="tips-box" id="exercise-tips"></div>
-      </div>
+      <div class="setup-cols">
 
-      <!-- Sets & Reps -->
-      <div class="card">
-        <h3 class="card-title">Workout Goal</h3>
-        <div class="steppers">
-          <div class="stepper">
-            <label>Sets</label>
-            <div class="stepper-row">
-              <button class="btn-stepper" id="btn-sets-minus">−</button>
-              <span class="stepper-value" id="sets-display">3</span>
-              <button class="btn-stepper" id="btn-sets-plus">+</button>
+        <!-- ── Left column ────────────────────────────────────────────────── -->
+        <div class="setup-col">
+
+          <!-- Exercise selection -->
+          <div class="card">
+            <h3 class="card-title">Exercise</h3>
+            <select id="exercise-select"></select>
+            <div class="tips-box" id="exercise-tips"></div>
+          </div>
+
+          <!-- Sets & Reps -->
+          <div class="card">
+            <h3 class="card-title">Workout Goal</h3>
+            <div class="steppers">
+              <div class="stepper">
+                <label>Sets</label>
+                <div class="stepper-row">
+                  <button class="btn-stepper" id="btn-sets-minus">−</button>
+                  <span class="stepper-value" id="sets-display">3</span>
+                  <button class="btn-stepper" id="btn-sets-plus">+</button>
+                </div>
+              </div>
+              <div class="stepper">
+                <label>Reps</label>
+                <div class="stepper-row">
+                  <button class="btn-stepper" id="btn-reps-minus">−</button>
+                  <span class="stepper-value" id="reps-display">12</span>
+                  <button class="btn-stepper" id="btn-reps-plus">+</button>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="stepper">
-            <label>Reps</label>
-            <div class="stepper-row">
-              <button class="btn-stepper" id="btn-reps-minus">−</button>
-              <span class="stepper-value" id="reps-display">12</span>
-              <button class="btn-stepper" id="btn-reps-plus">+</button>
+
+          <!-- Rest Times -->
+          <div class="card">
+            <h3 class="card-title">Rest Times</h3>
+            <div class="steppers">
+              <div class="stepper">
+                <label>Between Sets</label>
+                <div class="stepper-row">
+                  <button class="btn-stepper" id="btn-rest-sets-minus">−</button>
+                  <input type="number" class="rest-number-input" id="rest-sets-input" min="0" max="300" value="30" />
+                  <button class="btn-stepper" id="btn-rest-sets-plus">+</button>
+                </div>
+                <div class="rest-time-hint">0 – 300 s (max 5 min)</div>
+              </div>
+              <div class="stepper">
+                <label>Between Exercises</label>
+                <div class="stepper-row">
+                  <button class="btn-stepper" id="btn-rest-exercises-minus">−</button>
+                  <input type="number" class="rest-number-input" id="rest-exercises-input" min="0" max="300" value="60" />
+                  <button class="btn-stepper" id="btn-rest-exercises-plus">+</button>
+                </div>
+                <div class="rest-time-hint">0 – 300 s (max 5 min)</div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      <!-- Rest Times -->
-      <div class="card">
-        <h3 class="card-title">Rest Between Sets</h3>
-        <div class="steppers" style="justify-content:center;">
-          <div class="stepper" style="max-width:220px; flex:none;">
-            <label>Duration (seconds)</label>
-            <div class="stepper-row">
-              <button class="btn-stepper" id="btn-rest-sets-minus">−</button>
-              <input type="number" class="rest-number-input" id="rest-sets-input" min="0" max="300" value="30" />
-              <button class="btn-stepper" id="btn-rest-sets-plus">+</button>
+          <button class="btn btn-primary" id="btn-start">▶ Start Single Exercise</button>
+
+        </div><!-- /setup-col left -->
+
+        <!-- ── Right column ───────────────────────────────────────────────── -->
+        <div class="setup-col">
+
+          <!-- Presets -->
+          <div class="card">
+            <h3 class="card-title">Presets</h3>
+            <div style="margin-bottom:10px;">
+              <select id="preset-select" style="margin-bottom:8px;"></select>
+              <button class="btn btn-danger" id="btn-delete-preset" style="width:100%;">Delete selected preset</button>
             </div>
-            <div class="rest-time-hint">0 – 300 s &nbsp;(max 5 min) · type or use buttons</div>
+            <div class="preset-row">
+              <input type="text" id="preset-name" placeholder="Name this preset…" maxlength="40" />
+              <button class="btn btn-accent" id="btn-save-preset">💾 Save</button>
+            </div>
           </div>
-        </div>
-      </div>
 
-      <!-- Presets -->
-      <div class="card">
-        <h3 class="card-title">Presets</h3>
-
-        <div style="margin-bottom:10px;">
-          <select id="preset-select" style="margin-bottom:8px;"></select>
-          <button class="btn btn-danger" id="btn-delete-preset" style="width:100%;">Delete selected preset</button>
-        </div>
-
-        <div class="preset-row">
-          <input type="text" id="preset-name" placeholder="Name this preset…" maxlength="40" />
-          <button class="btn btn-accent" id="btn-save-preset">💾 Save</button>
-        </div>
-      </div>
-
-      <!-- Workout Plan -->
-      <div class="card">
-        <h3 class="card-title">Workout Plan</h3>
-        <button class="btn btn-accent" id="btn-add-to-plan" style="width:100%; margin-bottom:12px;">+ Add Current Exercise to Plan</button>
-        <div id="plan-list" class="plan-list"></div>
-        <div style="margin-top:12px;">
-          <div class="preset-row" style="margin-bottom:8px;">
-            <input type="text" id="plan-name" placeholder="Plan name…" maxlength="40" />
-            <button class="btn btn-accent" id="btn-save-plan">💾</button>
+          <!-- Workout Plan -->
+          <div class="card">
+            <h3 class="card-title">Workout Plan</h3>
+            <button class="btn btn-accent" id="btn-add-to-plan" style="width:100%; margin-bottom:12px;">+ Add Current Exercise to Plan</button>
+            <div id="plan-list" class="plan-list"></div>
+            <div style="margin-top:12px;">
+              <div class="preset-row" style="margin-bottom:8px;">
+                <input type="text" id="plan-name" placeholder="Plan name…" maxlength="40" />
+                <button class="btn btn-accent" id="btn-save-plan">💾</button>
+              </div>
+              <select id="plan-select" style="margin-bottom:8px;"></select>
+              <div style="display:flex; gap:8px;">
+                <button class="btn btn-secondary" id="btn-load-plan" style="flex:1;">Load Plan</button>
+                <button class="btn btn-danger" id="btn-delete-plan" style="flex:1;">Delete Plan</button>
+              </div>
+            </div>
+            <button class="btn btn-primary" id="btn-start-plan" style="display:none; margin-top:12px;">▶ Start Plan Workout</button>
           </div>
-          <select id="plan-select" style="margin-bottom:8px;"></select>
-          <div style="display:flex; gap:8px;">
-            <button class="btn btn-secondary" id="btn-load-plan" style="flex:1;">Load Plan</button>
-            <button class="btn btn-danger" id="btn-delete-plan" style="flex:1;">Delete Plan</button>
-          </div>
-        </div>
-        <button class="btn btn-primary" id="btn-start-plan" style="display:none; margin-top:12px;">▶ Start Plan Workout</button>
-      </div>
 
-      <button class="btn btn-primary" id="btn-start">▶ Start Single Exercise</button>
+        </div><!-- /setup-col right -->
+
+      </div><!-- /setup-cols -->
 
     </div>
   </section>
@@ -126,63 +147,74 @@
       <h2 id="workout-title">Exercise</h2>
     </div>
 
-    <!-- Camera + skeleton overlay -->
-    <div class="camera-wrapper">
-      <video id="camera-feed" autoplay muted playsinline></video>
-      <canvas id="pose-canvas"></canvas>
-      <div class="angle-badge" id="angle-display">--°</div>
-      <div class="flash-overlay" id="flash-overlay"></div>
-    </div>
+    <div class="workout-body">
 
-    <!-- Set / Rep status row -->
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-label">Set</div>
-        <div class="stat-value" id="set-display">1 / 3</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Reps</div>
-        <div class="stat-value" id="rep-display">0 / 12</div>
-      </div>
-    </div>
-
-    <!-- Big rep count -->
-    <div class="rep-counter-block">
-      <div>
-        <div class="rep-label">Current Reps</div>
-        <div class="rep-big" id="rep-count">0</div>
-        <div class="rep-target">Target: <span id="target-reps-display">12</span></div>
-      </div>
-      <div style="font-size:3rem; opacity:.25;">💪</div>
-    </div>
-
-    <!-- Progress bars -->
-    <div class="progress-section">
-      <div class="progress-row">
-        <div class="progress-meta">
-          <span>Set progress</span>
-          <span id="pct-set">0%</span>
-        </div>
-        <div class="progress-track">
-          <div class="progress-fill" id="bar-set" style="width:0%"></div>
+      <!-- Camera column -->
+      <div class="workout-camera-col">
+        <div class="camera-wrapper">
+          <video id="camera-feed" autoplay muted playsinline></video>
+          <canvas id="pose-canvas"></canvas>
+          <div class="angle-badge" id="angle-display">--°</div>
+          <div class="flash-overlay" id="flash-overlay"></div>
         </div>
       </div>
-      <div class="progress-row">
-        <div class="progress-meta">
-          <span>Overall progress</span>
-          <span id="pct-overall">0%</span>
-        </div>
-        <div class="progress-track">
-          <div class="progress-fill accent" id="bar-overall" style="width:0%"></div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Controls -->
-    <div class="workout-controls">
-      <button class="btn btn-secondary" id="btn-pause">⏸ Pause</button>
-      <button class="btn btn-primary" id="btn-next-set">Next Set ▶</button>
-    </div>
+      <!-- Stats column -->
+      <div class="workout-stats-col">
+
+        <!-- Set / Rep status row -->
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-label">Set</div>
+            <div class="stat-value" id="set-display">1 / 3</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Reps</div>
+            <div class="stat-value" id="rep-display">0 / 12</div>
+          </div>
+        </div>
+
+        <!-- Big rep count -->
+        <div class="rep-counter-block">
+          <div>
+            <div class="rep-label">Current Reps</div>
+            <div class="rep-big" id="rep-count">0</div>
+            <div class="rep-target">Target: <span id="target-reps-display">12</span></div>
+          </div>
+          <div style="font-size:3rem; opacity:.25;">💪</div>
+        </div>
+
+        <!-- Progress bars -->
+        <div class="progress-section">
+          <div class="progress-row">
+            <div class="progress-meta">
+              <span>Set progress</span>
+              <span id="pct-set">0%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" id="bar-set" style="width:0%"></div>
+            </div>
+          </div>
+          <div class="progress-row">
+            <div class="progress-meta">
+              <span>Overall progress</span>
+              <span id="pct-overall">0%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill accent" id="bar-overall" style="width:0%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="workout-controls">
+          <button class="btn btn-secondary" id="btn-pause">⏸ Pause</button>
+          <button class="btn btn-primary" id="btn-next-set">Next Set ▶</button>
+        </div>
+
+      </div><!-- /workout-stats-col -->
+
+    </div><!-- /workout-body -->
 
   </section>
 

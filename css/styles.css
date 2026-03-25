@@ -167,6 +167,13 @@ select option { background: var(--surface2); }
 @keyframes spin { to { transform: rotate(360deg); } }
 #screen-loading h2 { color: var(--text-muted); }
 
+/* ── Setup two-column layout ─────────────────────────────────────────────── */
+.setup-cols { display: flex; flex-direction: column; }
+.setup-col { width: 100%; }
+
+/* ── Workout body layout (mobile: stacked) ───────────────────────────────── */
+.workout-body { width: 100%; display: flex; flex-direction: column; }
+
 /* ── Workout Screen ──────────────────────────────────────────────────────── */
 #screen-workout { padding: 12px 12px 24px; }
 #screen-workout .screen-inner { max-width: 100%; }
@@ -472,8 +479,72 @@ select option { background: var(--surface2); }
 .plan-summary-name { font-weight: 600; }
 .plan-summary-meta { color: var(--primary); font-weight: 700; font-size: .9rem; }
 
-/* ── Responsive tweaks ───────────────────────────────────────────────────── */
+/* ── Responsive: small mobile ────────────────────────────────────────────── */
 @media (max-width: 400px) {
   .steppers { gap: 10px; }
   .rep-big { font-size: 2.8rem; }
+}
+
+/* ── Responsive: tablet (≥ 640px) ───────────────────────────────────────── */
+@media (min-width: 640px) {
+  .screen-inner { max-width: 580px; }
+  .camera-wrapper { max-width: 520px; }
+  .stats-row, .rep-counter-block, .progress-section, .workout-controls { max-width: 520px; }
+}
+
+/* ── Responsive: desktop (≥ 960px) ─────────────────────────────────────── */
+@media (min-width: 960px) {
+  .screen { padding: 32px 40px 48px; }
+
+  /* Setup: two-column side by side */
+  .screen-inner { max-width: 960px; }
+
+  .setup-cols {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 28px;
+  }
+  .setup-col { flex: 1; min-width: 0; }
+
+  /* Workout: camera left, stats right */
+  #screen-workout { padding: 16px 40px 32px; }
+
+  .workout-header {
+    max-width: 1140px;
+    margin-inline: auto;
+    margin-bottom: 16px;
+  }
+
+  .workout-body {
+    flex-direction: row;
+    gap: 24px;
+    max-width: 1140px;
+    margin: 0 auto;
+    align-items: flex-start;
+  }
+
+  .workout-camera-col {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .workout-camera-col .camera-wrapper {
+    max-width: 100%;
+    margin: 0 0 0 0;
+    aspect-ratio: 4/3;
+  }
+
+  .workout-stats-col {
+    width: 360px;
+    flex-shrink: 0;
+  }
+
+  /* Override element max-widths inside stats column */
+  .workout-stats-col .stats-row,
+  .workout-stats-col .rep-counter-block,
+  .workout-stats-col .progress-section,
+  .workout-stats-col .workout-controls {
+    max-width: 100%;
+    margin-inline: 0;
+  }
 }
