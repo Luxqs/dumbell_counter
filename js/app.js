@@ -2,6 +2,8 @@ class App {
   constructor() {
     this.detector = new PoseDetector();
     this.counter = null;
+    this.audio = new AudioManager();
+    this.profiles = new ProfileManager();
     this.wm = new WorkoutManager();
     this.wpm = new WorkoutPlanManager();
 
@@ -30,16 +32,21 @@ class App {
     this.planResults = [];
     this._isExerciseTransition = false;
 
+    // Workout & set timers
+    this.workoutStartTime = 0;
+    this.setStartTime = 0;
+    this.setDurations = [];
+    this._workoutTimerInterval = null;
+
     // Flash effect timeout
     this._flashTimeout = null;
 
     this._cacheDOM();
     this._populateExercises();
-    this._populatePresets();
-    this._populatePlanSelect();
-    this._renderPlanList();
+    this._populatePresetPlans();
     this._bindSetup();
     this._bindWorkout();
+    this._bindProfileModal();
     this._init();
   }
 
@@ -85,6 +92,9 @@ class App {
       btnLoadPlan: $('btn-load-plan'),
       btnDeletePlan: $('btn-delete-plan'),
       btnStartPlan: $('btn-start-plan'),
+      // Preset plan templates
+      presetPlanSelect: $('preset-plan-select'),
+      btnLoadPresetPlan: $('btn-load-preset-plan'),
     };
     this.workout = {
       title: $('workout-title'),
@@ -103,6 +113,9 @@ class App {
       btnNext: $('btn-next-set'),
       btnBack: $('btn-back'),
       flashOverlay: $('flash-overlay'),
+      btnAudio: $('btn-audio-toggle'),
+      totalTimer: $('workout-total-timer'),
+      setTimer: $('workout-set-timer'),
     };
     this.rest = {
       setDone: $('rest-set-done'),
@@ -115,6 +128,8 @@ class App {
       exerciseName: $('complete-exercise'),
       totalSets: $('complete-sets'),
       totalReps: $('complete-reps'),
+      totalTime: $('complete-time'),
+      planTime: $('complete-plan-time'),
       btnAgain: $('btn-do-again'),
       btnHome: $('btn-home'),
       singleStats: $('complete-single-stats'),
@@ -123,6 +138,12 @@ class App {
       heading: document.querySelector('#screen-complete h1'),
     };
     this.loadingMsg = $('loading-msg');
+    this.profileModal = $('profile-modal');
+    this.profileList = $('profile-list');
+    this.profileNameInput = $('profile-name-input');
+    this.btnCreateProfile = $('btn-create-profile');
+    this.profileIndicator = $('profile-indicator');
+    this.btnSwitchProfile = $('btn-switch-profile');
   }
 
   // ── Populate UI ──────────────────────────────────────────────────────────
@@ -160,6 +181,17 @@ class App {
       const opt = document.createElement('option');
       opt.value = n;
       opt.textContent = n;
+      sel.appendChild(opt);
+    });
+  }
+
+  _populatePresetPlans() {
+    const sel = this.setup.presetPlanSelect;
+    sel.innerHTML = '<option value="">— Load a template plan —</option>';
+    PRESET_PLANS.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = `${p.name} — ${p.description}`;
       sel.appendChild(opt);
     });
   }
@@ -211,7 +243,6 @@ class App {
       list.appendChild(div);
     });
 
-    // Inline field editing — update model directly, no re-render (preserves focus)
     list.querySelectorAll('.plan-field-input').forEach(input => {
       input.addEventListener('change', () => {
         const idx = parseInt(input.dataset.idx);
@@ -226,7 +257,6 @@ class App {
       });
     });
 
-    // Move / remove buttons
     list.querySelectorAll('.btn-icon[data-action]').forEach(btn => {
       btn.addEventListener('click', () => {
         const action = btn.dataset.action;
@@ -245,6 +275,102 @@ class App {
     });
 
     this.setup.btnStartPlan.style.display = '';
+  }
+
+  // ── Profile Modal ────────────────────────────────────────────────────────
+
+  _bindProfileModal() {
+    this.btnCreateProfile.addEventListener('click', () => {
+      const name = this.profileNameInput.value.trim();
+      if (!name) { this.profileNameInput.focus(); return; }
+      this.profiles.create(name);
+      this.profileNameInput.value = '';
+      this._applyActiveProfile();
+      this._hideProfileModal();
+      this._toast(`Profile "${name}" selected!`);
+    });
+
+    this.profileNameInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') this.btnCreateProfile.click();
+    });
+
+    this.btnSwitchProfile.addEventListener('click', () => this._showProfileModal());
+  }
+
+  _showProfileModal() {
+    this._renderProfileList();
+    this.profileModal.classList.add('active');
+    this.profileNameInput.focus();
+  }
+
+  _hideProfileModal() {
+    this.profileModal.classList.remove('active');
+  }
+
+  _renderProfileList() {
+    const names = this.profiles.list();
+    const active = this.profiles.getActive();
+    this.profileList.innerHTML = '';
+
+    if (names.length === 0) {
+      this.profileList.innerHTML = '<p class="profile-empty">No profiles yet — create one below.</p>';
+      return;
+    }
+
+    names.forEach(name => {
+      const div = document.createElement('div');
+      div.className = 'profile-item' + (name === active ? ' active' : '');
+      div.innerHTML = `
+        <span class="profile-item-name">${name}</span>
+        <div class="profile-item-actions">
+          <button class="btn btn-secondary" data-select="${name}" style="padding:6px 14px; font-size:.85rem;">Select</button>
+          <button class="btn-icon danger" data-delete="${name}" title="Delete profile">✕</button>
+        </div>
+      `;
+      this.profileList.appendChild(div);
+    });
+
+    this.profileList.querySelectorAll('[data-select]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const name = btn.dataset.select;
+        this.profiles.setActive(name);
+        this._applyActiveProfile();
+        this._hideProfileModal();
+        this._toast(`Profile "${name}" selected!`);
+      });
+    });
+
+    this.profileList.querySelectorAll('[data-delete]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const name = btn.dataset.delete;
+        if (!confirm(`Delete profile "${name}"? This does NOT delete your workout data.`)) return;
+        this.profiles.delete(name);
+        if (!this.profiles.getActive()) {
+          this._applyActiveProfile();
+        }
+        this._renderProfileList();
+      });
+    });
+  }
+
+  _applyActiveProfile() {
+    const active = this.profiles.getActive();
+    if (active) {
+      const ns = this.profiles.namespace(active);
+      this.wm.setNamespace(ns);
+      this.wpm.setNamespace(ns);
+      this.profileIndicator.textContent = `👤 ${active}`;
+      this.btnSwitchProfile.style.display = '';
+    } else {
+      this.wm.setNamespace('');
+      this.wpm.setNamespace('');
+      this.profileIndicator.textContent = '';
+      this.btnSwitchProfile.style.display = '';
+    }
+    this._populatePresets();
+    this._populatePlanSelect();
+    this.workoutPlan = [];
+    this._renderPlanList();
   }
 
   // ── Bind Events: Setup screen ────────────────────────────────────────────
@@ -280,7 +406,6 @@ class App {
       s.repsDisplay.value = this.targetReps;
     });
 
-    // Rest time inputs: type or use +/- (±10 s per click)
     const clampRest = v => Math.min(300, Math.max(0, parseInt(v) || 0));
 
     s.btnRestSetsMinus.addEventListener('click', () => {
@@ -343,6 +468,17 @@ class App {
       this.wm.delete(name);
       this._populatePresets();
       this._toast('Preset deleted');
+    });
+
+    // Preset plan templates
+    s.btnLoadPresetPlan.addEventListener('click', () => {
+      const id = s.presetPlanSelect.value;
+      if (!id) return;
+      const template = PRESET_PLANS.find(p => p.id === id);
+      if (!template) return;
+      this.workoutPlan = template.plan.map(item => ({ ...item }));
+      this._renderPlanList();
+      this._toast(`"${template.name}" loaded!`);
     });
 
     // Plan management
@@ -417,6 +553,12 @@ class App {
 
     w.btnNext.addEventListener('click', () => this._completeSet());
 
+    w.btnAudio.addEventListener('click', () => {
+      const enabled = this.audio.toggle();
+      w.btnAudio.textContent = enabled ? '🔔' : '🔕';
+      w.btnAudio.title = enabled ? 'Mute beep sound' : 'Enable beep sound';
+    });
+
     this.rest.btnSkip.addEventListener('click', () => this._endRest());
 
     this.complete.btnAgain.addEventListener('click', () => this._startWorkout(this.isRunningPlan));
@@ -426,6 +568,17 @@ class App {
   // ── Initialise ───────────────────────────────────────────────────────────
 
   async _init() {
+    // Update audio button to reflect saved preference
+    this.workout.btnAudio.textContent = this.audio.enabled ? '🔔' : '🔕';
+
+    // Load profile
+    const active = this.profiles.getActive();
+    if (!active) {
+      this._showProfileModal();
+    } else {
+      this._applyActiveProfile();
+    }
+
     this._showScreen('setup');
   }
 
@@ -444,7 +597,6 @@ class App {
       this.restBetweenSets = item.restBetweenSets;
     } else {
       this.exerciseId = this.setup.exerciseSelect.value;
-      // Sync in case user typed without blurring
       this.targetSets = Math.min(20, Math.max(1, parseInt(this.setup.setsDisplay.value) || 1));
       this.targetReps = Math.min(50, Math.max(1, parseInt(this.setup.repsDisplay.value) || 1));
       this.restBetweenSets = Math.min(300, Math.max(0, parseInt(this.setup.restSetsInput.value) || 0));
@@ -455,6 +607,13 @@ class App {
     this._isExerciseTransition = false;
     this.counter = new RepCounter(this.exerciseId);
     this.counter.reset();
+
+    // Initialise timers
+    this.workoutStartTime = Date.now();
+    this.setStartTime = Date.now();
+    this.setDurations = [];
+    clearInterval(this._workoutTimerInterval);
+    this._workoutTimerInterval = setInterval(() => this._updateTimerDisplays(), 1000);
 
     this._showScreen('loading');
 
@@ -475,6 +634,7 @@ class App {
 
     } catch (err) {
       alert('Could not start camera: ' + err.message);
+      clearInterval(this._workoutTimerInterval);
       this._showScreen('setup');
       return;
     }
@@ -508,6 +668,7 @@ class App {
 
       if (result.counted) {
         this._flashRep();
+        this.audio.playRep();
         if (result.reps >= this.targetReps) {
           setTimeout(() => this._completeSet(), 400);
           return;
@@ -518,11 +679,38 @@ class App {
     this._loop();
   }
 
+  // ── Timers ───────────────────────────────────────────────────────────────
+
+  _updateTimerDisplays() {
+    if (this.workout.totalTimer) {
+      const elapsed = Math.round((Date.now() - this.workoutStartTime) / 1000);
+      this.workout.totalTimer.textContent = this._fmtTime(elapsed);
+    }
+    if (this.workout.setTimer) {
+      const elapsed = Math.round((Date.now() - this.setStartTime) / 1000);
+      this.workout.setTimer.textContent = this._fmtTime(elapsed);
+    }
+  }
+
+  _fmtTime(seconds) {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  }
+
+  _stopTimers() {
+    clearInterval(this._workoutTimerInterval);
+    this._workoutTimerInterval = null;
+  }
+
   // ── Set / rest / completion ──────────────────────────────────────────────
 
   _completeSet() {
     cancelAnimationFrame(this.animationId);
     this.isRunning = false;
+
+    // Record set duration
+    this.setDurations.push(Math.round((Date.now() - this.setStartTime) / 1000));
 
     if (this.currentSet >= this.targetSets) {
       if (this.isRunningPlan && this.planIndex < this.workoutPlan.length - 1) {
@@ -594,6 +782,7 @@ class App {
       this._loadNextPlanExercise();
     } else {
       this.currentSet++;
+      this.setStartTime = Date.now();
       this.counter.reset();
       this._showScreen('workout');
       this._updateWorkoutUI();
@@ -612,6 +801,7 @@ class App {
     this.targetReps = item.reps;
     this.restBetweenSets = item.restBetweenSets;
     this.currentSet = 1;
+    this.setStartTime = Date.now();
     this.counter = new RepCounter(this.exerciseId);
     this.counter.reset();
     this._showScreen('workout');
@@ -634,7 +824,10 @@ class App {
   }
 
   _showComplete() {
+    this._stopTimers();
     this._stopCamera();
+
+    const totalSecs = Math.round((Date.now() - this.workoutStartTime) / 1000);
 
     if (this.isRunningPlan) {
       this._recordPlanResult();
@@ -650,6 +843,10 @@ class App {
         div.innerHTML = `<span class="plan-summary-name">${i + 1}. ${r.exerciseName}</span><span class="plan-summary-meta">${r.sets} sets · ${r.totalReps} reps</span>`;
         list.appendChild(div);
       });
+
+      if (this.complete.planTime) {
+        this.complete.planTime.textContent = this._fmtTime(totalSecs);
+      }
     } else {
       this.complete.singleStats.style.display = '';
       this.complete.planStats.style.display = 'none';
@@ -659,6 +856,9 @@ class App {
       this.complete.exerciseName.textContent = ex?.name || '';
       this.complete.totalSets.textContent = `${this.targetSets} sets`;
       this.complete.totalReps.textContent = `${totalReps} reps`;
+      if (this.complete.totalTime) {
+        this.complete.totalTime.textContent = this._fmtTime(totalSecs);
+      }
     }
 
     this._showScreen('complete');
@@ -667,6 +867,7 @@ class App {
   _goSetup() {
     cancelAnimationFrame(this.animationId);
     clearInterval(this.restTimer);
+    this._stopTimers();
     this.isRunning = false;
     this.isPaused = false;
     this.isRunningPlan = false;
@@ -694,6 +895,8 @@ class App {
     this.workout.title.textContent = title;
     this.workout.targetRepsDisplay.textContent = this.targetReps;
     this._updateCountUI({ reps: 0, angle: 0, counted: false });
+    // Reset set timer display
+    if (this.workout.setTimer) this.workout.setTimer.textContent = '00:00';
   }
 
   _updateCountUI({ reps, angle }) {

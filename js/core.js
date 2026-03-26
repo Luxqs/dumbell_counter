@@ -1,4 +1,92 @@
-// ─── Pose Detector (wraps TensorFlow.js MoveNet) ───────────────────────────
+// ─── Audio Manager ────────────────────────────────────────────────────────────
+
+class AudioManager {
+  constructor() {
+    this._ctx = null;
+    this.enabled = this._loadPref();
+  }
+
+  _loadPref() {
+    try { return JSON.parse(localStorage.getItem('dc_audio_enabled')) ?? true; } catch { return true; }
+  }
+
+  _savePref() {
+    localStorage.setItem('dc_audio_enabled', JSON.stringify(this.enabled));
+  }
+
+  toggle() {
+    this.enabled = !this.enabled;
+    this._savePref();
+    return this.enabled;
+  }
+
+  _ensureCtx() {
+    if (!this._ctx) {
+      this._ctx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (this._ctx.state === 'suspended') this._ctx.resume();
+    return this._ctx;
+  }
+
+  playRep() {
+    if (!this.enabled) return;
+    try {
+      const ctx = this._ensureCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.35, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.12);
+    } catch (_) {}
+  }
+}
+
+
+// ─── Profile Manager ──────────────────────────────────────────────────────────
+
+class ProfileManager {
+  constructor() {
+    this.KEY = 'dc_profiles_v1';
+    this.ACTIVE_KEY = 'dc_active_profile';
+  }
+
+  list() {
+    try { return JSON.parse(localStorage.getItem(this.KEY)) || []; } catch { return []; }
+  }
+
+  _saveList(arr) { localStorage.setItem(this.KEY, JSON.stringify(arr)); }
+
+  getActive() { return localStorage.getItem(this.ACTIVE_KEY) || null; }
+
+  setActive(name) { localStorage.setItem(this.ACTIVE_KEY, name); }
+
+  create(name) {
+    name = name.trim();
+    if (!name) return false;
+    const list = this.list();
+    if (!list.includes(name)) { list.push(name); this._saveList(list); }
+    this.setActive(name);
+    return true;
+  }
+
+  delete(name) {
+    this._saveList(this.list().filter(n => n !== name));
+    if (this.getActive() === name) localStorage.removeItem(this.ACTIVE_KEY);
+  }
+
+  // Returns a storage key prefix for the given profile name
+  namespace(name) {
+    return `u_${name.replace(/[^a-zA-Z0-9]/g, '_')}_`;
+  }
+}
+
+
+// ─── Pose Detector (wraps TensorFlow.js MoveNet) ─────────────────────────────
 
 class PoseDetector {
   constructor() {
@@ -31,7 +119,6 @@ class PoseDetector {
 
   drawSkeleton(canvas, video, pose, exerciseId) {
     const ctx = canvas.getContext('2d');
-    // Size canvas to video intrinsic dimensions
     canvas.width = video.videoWidth || canvas.offsetWidth;
     canvas.height = video.videoHeight || canvas.offsetHeight;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -49,7 +136,6 @@ class PoseDetector {
     const kpMap = {};
     pose.keypoints.forEach(k => { kpMap[k.name] = k; });
 
-    // Connections
     SKELETON.forEach(([na, nb]) => {
       const a = kpMap[na], b = kpMap[nb];
       if (!a || !b || a.score < MIN_KEYPOINT_CONFIDENCE || b.score < MIN_KEYPOINT_CONFIDENCE) return;
@@ -62,7 +148,6 @@ class PoseDetector {
       ctx.stroke();
     });
 
-    // Keypoints
     pose.keypoints.forEach(k => {
       if (k.score < MIN_KEYPOINT_CONFIDENCE) return;
       const active = activeNames.includes(k.name);
@@ -80,7 +165,7 @@ class PoseDetector {
 }
 
 
-// ─── Rep Counter ─────────────────────────────────────────────────────────────
+// ─── Rep Counter ──────────────────────────────────────────────────────────────
 
 class RepCounter {
   constructor(exerciseId) {
@@ -140,7 +225,7 @@ class RepCounter {
     let counted = false;
 
     if (direction === 'decrease') {
-      if (angle > restThreshold)                         this.stage = 'rest';
+      if (angle > restThreshold)                          this.stage = 'rest';
       if (angle < peakThreshold && this.stage === 'rest') { this.stage = 'peak'; this.reps++; counted = true; }
     } else {
       if (angle < restThreshold)                          this.stage = 'rest';
@@ -152,10 +237,14 @@ class RepCounter {
 }
 
 
-// ─── Workout Preset Manager ──────────────────────────────────────────────────
+// ─── Workout Preset Manager ───────────────────────────────────────────────────
 
 class WorkoutManager {
   constructor() { this.KEY = 'dc_presets_v1'; }
+
+  setNamespace(ns) {
+    this.KEY = ns ? `dc_${ns}presets_v1` : 'dc_presets_v1';
+  }
 
   _load() {
     try { return JSON.parse(localStorage.getItem(this.KEY)) || {}; } catch { return {}; }
@@ -187,6 +276,10 @@ class WorkoutManager {
 
 class WorkoutPlanManager {
   constructor() { this.KEY = 'dc_plans_v1'; }
+
+  setNamespace(ns) {
+    this.KEY = ns ? `dc_${ns}plans_v1` : 'dc_plans_v1';
+  }
 
   _load() {
     try { return JSON.parse(localStorage.getItem(this.KEY)) || {}; } catch { return {}; }

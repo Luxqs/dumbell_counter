@@ -222,7 +222,7 @@ input.stepper-value::-webkit-inner-spin-button { -webkit-appearance: none; margi
   max-width: 640px;
   margin-inline: auto;
 }
-.workout-header h2 { flex: 1; font-size: 1.15rem; }
+.workout-header h2 { flex: 1; font-size: 1.15rem; text-align: center; }
 
 /* Camera */
 .camera-wrapper {
@@ -539,6 +539,132 @@ input.stepper-value::-webkit-inner-spin-button { -webkit-appearance: none; margi
 .plan-summary-item:last-child { border-bottom: none; }
 .plan-summary-name { font-weight: 600; }
 .plan-summary-meta { color: var(--primary); font-weight: 700; font-size: .9rem; }
+
+/* ── Profile Modal ───────────────────────────────────────────────────────── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.75);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  backdrop-filter: blur(4px);
+}
+.modal-overlay.active { display: flex; animation: screenFadeIn .2s ease; }
+
+.modal-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px 28px;
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+.modal-icon { font-size: 3rem; margin-bottom: 12px; }
+.modal-title { font-size: 1.4rem; font-weight: 700; color: var(--primary); margin-bottom: 10px; }
+.modal-sub { font-size: .85rem; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5; }
+
+.profile-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; min-height: 0; }
+.profile-empty { color: var(--text-muted); font-size: .88rem; padding: 8px 0; }
+
+.profile-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  gap: 10px;
+}
+.profile-item.active { border-color: var(--primary); }
+.profile-item-name { font-weight: 600; font-size: .95rem; }
+.profile-item-actions { display: flex; gap: 6px; align-items: center; }
+
+.profile-new-row { display: flex; gap: 8px; }
+.profile-new-row input { flex: 1; }
+
+/* Profile bar in setup header */
+.profile-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 8px;
+  font-size: .85rem;
+  min-height: 22px;
+}
+.profile-indicator { color: var(--primary); font-weight: 600; }
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: .82rem;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+.btn-link:hover { color: var(--primary); }
+
+/* ── Workout Timer Bar ───────────────────────────────────────────────────── */
+.workout-timers-bar {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 10px;
+  max-width: 640px;
+  margin-inline: auto;
+}
+.timer-chip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: .85rem;
+}
+.timer-chip-label {
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-size: .7rem;
+  letter-spacing: .06em;
+}
+.timer-chip-value {
+  color: var(--primary);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-size: .95rem;
+  min-width: 38px;
+}
+
+/* ── Audio toggle button ─────────────────────────────────────────────────── */
+.workout-header-right { display: flex; align-items: center; }
+.btn-audio {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 1.2rem;
+  padding: 6px 10px;
+  cursor: pointer;
+  line-height: 1;
+  transition: background .15s, border-color .15s;
+}
+.btn-audio:hover { background: var(--primary-dim); border-color: var(--primary); }
+
+/* ── Preset plan template row ────────────────────────────────────────────── */
+.plan-templates-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  align-items: stretch;
+}
+.plan-templates-row select { flex: 1; }
 
 /* ── Responsive: small mobile ────────────────────────────────────────────── */
 @media (max-width: 400px) {
