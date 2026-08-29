@@ -6,6 +6,9 @@
   --surface: #161a24;
   --surface2: #1e2330;
   --border: #2a3040;
+  /* Input outlines need 3:1 against their fill (WCAG 1.4.11). --border is 1.2:1
+     on --surface2 — invisible in gym light — so form controls use this instead. */
+  --border-input: #667496;
   --primary: #22c55e;
   --primary-dim: rgba(34,197,94,0.15);
   --primary-dark: #16a34a;
@@ -32,7 +35,10 @@ html, body {
 }
 .screen {
   display: none;
+  /* 100dvh tracks the mobile address bar; without it the primary button on
+     every screen sits underneath Safari's chrome. 100vh stays as a fallback. */
   min-height: 100vh;
+  min-height: 100dvh;
   flex-direction: column;
   align-items: center;
   padding: 24px 16px 40px;
@@ -81,11 +87,11 @@ h3 { font-size: .78rem; font-weight: 700; color: var(--text-muted); text-transfo
 select, input[type="text"] {
   width: 100%;
   background: var(--surface2);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: var(--radius);
   color: var(--text);
   font-size: 1rem;
-  padding: 12px 14px;
+  padding: 13px 14px;   /* 45px tall — clears the 44px touch minimum */
   outline: none;
   transition: border-color .2s;
 }
@@ -101,9 +107,12 @@ select:focus, input[type="text"]:focus, input[type="number"]:focus { border-colo
 select option { background: var(--surface2); }
 
 /* ── Stepper ─────────────────────────────────────────────────────────────── */
-.steppers { display: flex; gap: 24px; }
+/* flex-wrap + a flex-basis floor: two steppers side by side need ~500px of
+   min-content, which overflowed every phone. Below ~460px they stack. */
+.steppers { display: flex; flex-wrap: wrap; gap: 14px; }
 .stepper {
-  flex: 1;
+  flex: 1 1 200px;
+  min-width: 0;
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -120,7 +129,7 @@ input.stepper-value {
   border: none;
   border-bottom: 2px solid var(--primary);
   border-radius: 0;
-  padding: 2px 0;
+  padding: 7px 0;
   outline: none;
   -moz-appearance: textfield;
   transition: border-color .2s;
@@ -129,7 +138,8 @@ input.stepper-value:focus { border-bottom-color: var(--accent); }
 input.stepper-value::-webkit-outer-spin-button,
 input.stepper-value::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .btn-stepper {
-  width: 36px; height: 36px;
+  width: 44px; height: 44px;
+  min-width: 44px; /* reliable touch target */
   border-radius: 50%;
   border: none;
   background: var(--surface);
@@ -139,8 +149,24 @@ input.stepper-value::-webkit-inner-spin-button { -webkit-appearance: none; margi
   line-height: 1;
   display: flex; align-items: center; justify-content: center;
   transition: background .15s;
+  -webkit-tap-highlight-color: transparent;
 }
-.btn-stepper:hover { background: var(--primary); color: #000; }
+.btn-stepper:hover  { background: var(--primary); color: #000; }
+.btn-stepper:active { background: var(--primary-dark); color: #000; transform: scale(.93); }
+
+/* ── Card subtitle ───────────────────────────────────────────────────────── */
+.card-sub {
+  font-size: .78rem;
+  color: var(--text-muted);
+  margin-top: -8px;
+  margin-bottom: 14px;
+  line-height: 1.4;
+}
+
+/* ── Plan section labels ─────────────────────────────────────────────────── */
+
+/* ── Small button variant ────────────────────────────────────────────────── */
+.btn.btn-sm { padding: 14px 14px; font-size: .85rem; }
 
 /* ── Tips ────────────────────────────────────────────────────────────────── */
 .tips-box {
@@ -177,13 +203,14 @@ input.stepper-value::-webkit-inner-spin-button { -webkit-appearance: none; margi
 .btn:disabled { opacity: .4; cursor: not-allowed; }
 
 .btn-primary   { background: linear-gradient(135deg, var(--primary-dark), var(--primary)); color: #000; width: 100%; padding: 16px; font-size: 1.1rem; border-radius: var(--radius-lg); box-shadow: 0 4px 14px rgba(34,197,94,.25); }
-.btn-primary:hover { filter: brightness(1.08); box-shadow: 0 6px 20px rgba(34,197,94,.35); }
+.btn-primary:hover   { filter: brightness(1.08); box-shadow: 0 6px 20px rgba(34,197,94,.35); }
+.btn-primary:disabled { opacity: .35; cursor: not-allowed; filter: none; box-shadow: none; }
 .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
 .btn-secondary:hover { border-color: var(--primary); color: var(--primary); }
-.btn-accent    { background: var(--accent); color: #fff; }
+.btn-accent    { background: #4f46e5; color: #fff; }   /* 6.3:1; var(--accent) was 4.47:1 */
 .btn-danger    { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
-.btn-danger:hover { background: var(--danger); color: #fff; }
-.btn-ghost     { background: transparent; color: var(--text-muted); border: 1px solid var(--border); padding: 8px 14px; font-size: .9rem; }
+.btn-danger:hover { background: #b91c1c; color: #fff; }  /* 6.5:1; --danger was 3.8:1 */
+.btn-ghost     { background: transparent; color: var(--text-muted); border: 1px solid var(--border); padding: 11px 14px; font-size: .9rem; }
 .btn-ghost:hover { color: var(--text); }
 
 /* ── Loading Screen ──────────────────────────────────────────────────────── */
@@ -204,15 +231,12 @@ input.stepper-value::-webkit-inner-spin-button { -webkit-appearance: none; margi
 #screen-loading h2 { color: var(--text-muted); }
 
 /* ── Setup two-column layout ─────────────────────────────────────────────── */
-.setup-cols { display: flex; flex-direction: column; }
-.setup-col { width: 100%; }
 
 /* ── Workout body layout (mobile: stacked) ───────────────────────────────── */
 .workout-body { width: 100%; display: flex; flex-direction: column; }
 
 /* ── Workout Screen ──────────────────────────────────────────────────────── */
 #screen-workout { padding: 12px 12px 24px; }
-#screen-workout .screen-inner { max-width: 100%; }
 
 .workout-header {
   display: flex;
@@ -222,7 +246,20 @@ input.stepper-value::-webkit-inner-spin-button { -webkit-appearance: none; margi
   max-width: 640px;
   margin-inline: auto;
 }
-.workout-header h2 { flex: 1; font-size: 1.15rem; text-align: center; }
+.workout-header-center {
+  flex: 1;
+  text-align: center;
+  min-width: 0;
+}
+.workout-header h2 { font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.workout-subtitle {
+  font-size: .72rem;
+  color: var(--primary);
+  font-weight: 600;
+  letter-spacing: .03em;
+  margin-top: 1px;
+  opacity: .85;
+}
 
 /* Camera */
 .camera-wrapper {
@@ -254,7 +291,9 @@ input.stepper-value::-webkit-inner-spin-button { -webkit-appearance: none; margi
   position: absolute;
   bottom: 10px;
   right: 10px;
-  background: rgba(0,0,0,.65);
+  /* The backdrop is a live camera frame. At .65 alpha this drops to 3.1:1 over
+     a bright gym wall; .85 holds 6.6:1 whatever the camera sees. */
+  background: rgba(0,0,0,.85);
   color: var(--primary);
   font-size: .85rem;
   font-weight: 700;
@@ -343,6 +382,19 @@ input.stepper-value::-webkit-inner-spin-button { -webkit-appearance: none; margi
 }
 .workout-controls .btn { flex: 1; }
 
+/* Next Set pulse — fires when target reps are reached */
+@keyframes nextSetPulse {
+  0%   { box-shadow: 0 4px 14px rgba(34,197,94,.25); }
+  50%  { box-shadow: 0 4px 28px rgba(34,197,94,.7), 0 0 0 6px rgba(34,197,94,.18); }
+  100% { box-shadow: 0 4px 14px rgba(34,197,94,.25); }
+}
+/* btn-next-set is an ID, not a class — as `.btn-next-set` this rule never
+   matched and the "target reached" pulse never fired. */
+#btn-next-set.reps-done {
+  animation: nextSetPulse 1s ease-in-out infinite;
+  filter: brightness(1.1);
+}
+
 /* ── Rest Screen ─────────────────────────────────────────────────────────── */
 #screen-rest { justify-content: center; text-align: center; gap: 0; }
 .rest-inner { width: 100%; max-width: 360px; }
@@ -385,7 +437,24 @@ input.stepper-value::-webkit-inner-spin-button { -webkit-appearance: none; margi
 }
 .rest-countdown { font-size: 3rem; font-weight: 800; color: var(--primary); line-height: 1; }
 .rest-label { font-size: .72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; margin-top: 4px; }
-.rest-tip { color: var(--text-muted); font-size: .9rem; margin-bottom: 28px; }
+.rest-tip { color: var(--text-muted); font-size: .9rem; margin-bottom: 20px; }
+
+/* Rest screen action row */
+.rest-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+.rest-actions .btn-ghost {
+  flex: 0 0 auto;
+  padding: 12px 20px;
+  font-size: .95rem;
+  font-weight: 700;
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+.rest-actions .btn-ghost:hover { border-color: var(--primary); color: var(--primary); }
+.rest-actions .btn-primary { flex: 1; }
 
 /* ── Complete Screen ─────────────────────────────────────────────────────── */
 #screen-complete { justify-content: center; text-align: center; }
@@ -402,6 +471,9 @@ input.stepper-value::-webkit-inner-spin-button { -webkit-appearance: none; margi
 .complete-stat { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 1rem; }
 .complete-stat:last-child { border-bottom: none; }
 .complete-stat span:last-child { font-weight: 700; color: var(--primary); }
+
+/* Volume is the key progressive-overload metric — slightly larger */
+#complete-volume { font-size: 1.1rem; }
 .complete-actions { display: flex; flex-direction: column; gap: 12px; }
 
 /* ── Toast ───────────────────────────────────────────────────────────────── */
@@ -425,15 +497,15 @@ input.stepper-value::-webkit-inner-spin-button { -webkit-appearance: none; margi
 
 /* ── Rest time number inputs ─────────────────────────────────────────────── */
 .rest-number-input {
-  width: 64px;
+  width: 76px;
   text-align: center;
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: var(--radius);
   color: var(--primary);
   font-size: 1.5rem;
   font-weight: 700;
-  padding: 4px 2px;
+  padding: 10px 2px;
   outline: none;
   -moz-appearance: textfield;
 }
@@ -441,7 +513,7 @@ input.stepper-value::-webkit-inner-spin-button { -webkit-appearance: none; margi
 .rest-number-input::-webkit-outer-spin-button,
 .rest-number-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .rest-time-hint {
-  font-size: .7rem;
+  font-size: .72rem;
   color: var(--text-muted);
   text-align: center;
   margin-top: 6px;
@@ -450,28 +522,8 @@ input.stepper-value::-webkit-inner-spin-button { -webkit-appearance: none; margi
 /* ── Plan List ───────────────────────────────────────────────────────────── */
 .plan-list { display: flex; flex-direction: column; gap: 8px; min-height: 40px; }
 .plan-empty { color: var(--text-muted); font-size: .88rem; text-align: center; padding: 12px 0; }
-.plan-item {
-  display: flex;
-  align-items: center;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 10px 12px;
-  gap: 10px;
-}
-.plan-item-num {
-  color: var(--accent);
-  font-size: .78rem;
-  font-weight: 700;
-  min-width: 18px;
-  text-align: center;
-}
-.plan-item-info { flex: 1; min-width: 0; }
-.plan-item-name { font-size: .95rem; font-weight: 600; }
-.plan-item-meta { font-size: .75rem; color: var(--text-muted); margin-top: 2px; }
-.plan-item-actions { display: flex; gap: 4px; flex-shrink: 0; }
 .btn-icon {
-  width: 28px; height: 28px;
+  width: 44px; height: 44px;   /* WCAG 2.5.5 minimum — was 28px */
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text-muted);
@@ -485,13 +537,6 @@ input.stepper-value::-webkit-inner-spin-button { -webkit-appearance: none; margi
 .btn-icon.danger:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
 
 /* ── Plan item inline fields ─────────────────────────────────────────────── */
-.plan-item-fields {
-  display: flex;
-  gap: 10px;
-  margin-top: 6px;
-  flex-wrap: wrap;
-  align-items: center;
-}
 .plan-field-label {
   display: flex;
   align-items: center;
@@ -502,15 +547,17 @@ input.stepper-value::-webkit-inner-spin-button { -webkit-appearance: none; margi
   letter-spacing: .04em;
 }
 .plan-field-input {
-  width: 52px;
+  width: 56px;
   text-align: center;
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: 6px;
   color: var(--text);
-  font-size: .95rem;
+  /* Exactly 1rem: iOS Safari zooms the page on focus for anything under 16px
+     and never zooms back out, stranding the user in a scrolled-sideways form. */
+  font-size: 1rem;
   font-weight: 700;
-  padding: 4px 2px;
+  padding: 12px 2px;
   outline: none;
   -moz-appearance: textfield;
 }
@@ -555,6 +602,7 @@ input.stepper-value::-webkit-inner-spin-button { -webkit-appearance: none; margi
 .modal-overlay.active { display: flex; animation: screenFadeIn .2s ease; }
 
 .modal-box {
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -563,6 +611,31 @@ input.stepper-value::-webkit-inner-spin-button { -webkit-appearance: none; margi
   max-width: 400px;
   text-align: center;
 }
+.modal-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  color: var(--text-muted);
+  font-size: .9rem;
+  width: 44px;
+  height: 44px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: background .15s, color .15s;
+  /* Hidden by default; JS adds .visible once a profile exists. visibility, not
+     opacity: an opacity:0 button stays in the tab order, so during first-run
+     onboarding a keyboard user could Tab to an invisible Close and escape the
+     modal with no profile selected. */
+  visibility: hidden;
+}
+.modal-close.visible { visibility: visible; }
+.modal-close:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
 .modal-icon { font-size: 3rem; margin-bottom: 12px; }
 .modal-title { font-size: 1.4rem; font-weight: 700; color: var(--primary); margin-bottom: 10px; }
 .modal-sub { font-size: .85rem; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5; }
@@ -601,11 +674,15 @@ input.stepper-value::-webkit-inner-spin-button { -webkit-appearance: none; margi
 .btn-link {
   background: none;
   border: none;
+  /* Negative margin keeps the visual position while giving a real touch target.
+     A trailing `padding: 0` used to sit at the end of this rule and quietly
+     flatten these links back to a 15px-tall tap target. */
+  padding: 15px 4px;
+  margin: -15px 0;
   color: var(--text-muted);
   font-size: .82rem;
   cursor: pointer;
   text-decoration: underline;
-  padding: 0;
 }
 .btn-link:hover { color: var(--primary); }
 
@@ -650,7 +727,8 @@ input.stepper-value::-webkit-inner-spin-button { -webkit-appearance: none; margi
   border-radius: var(--radius);
   color: var(--text);
   font-size: 1.2rem;
-  padding: 6px 10px;
+  padding: 11px 12px;
+  min-width: 44px;
   cursor: pointer;
   line-height: 1;
   transition: background .15s, border-color .15s;
@@ -679,19 +757,392 @@ input.stepper-value::-webkit-inner-spin-button { -webkit-appearance: none; margi
   .stats-row, .rep-counter-block, .progress-section, .workout-controls { max-width: 520px; }
 }
 
+/* ── Camera: mirror front-facing feed. The overlay canvas is mirrored WITH it,
+   because detection runs with flipHorizontal:false (keeps left/right labels
+   anatomically correct) and therefore draws in raw camera coordinates. */
+#camera-feed, #pose-canvas { transform: scaleX(-1); }
+
+/* ── Detection Quality Badge ─────────────────────────────────────────────── */
+.quality-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: .72rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+  letter-spacing: .02em;
+}
+.quality-badge.good { background: rgba(34,197,94,.85);  color: #000; }
+.quality-badge.fair { background: rgba(251,191,36,.85); color: #000; }
+.quality-badge.poor { background: #b91c1c;              color: #fff; }
+.quality-badge.none { background: rgba(0,0,0,.85);      color: #f0f4ff; }
+
+/* ── Camera Hint ─────────────────────────────────────────────────────────── */
+.camera-hint {
+  font-size: .8rem;
+  color: var(--text);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  text-align: center;
+  padding: 6px 12px;
+  margin: 6px auto 10px;
+  max-width: 640px;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Weight Row ──────────────────────────────────────────────────────────── */
+.weight-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  max-width: 640px;
+  margin-inline: auto;
+}
+.weight-row label {
+  flex: 1;
+  font-size: .78rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-bottom: 0;
+}
+/* Weight stepper buttons inherit base .btn-stepper but slightly smaller */
+.btn-weight-step {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  font-size: 1.2rem;
+  background: var(--surface2);
+}
+.weight-input {
+  width: 76px;
+  text-align: center;
+  background: var(--bg);
+  border: 1px solid var(--border-input);
+  border-radius: 8px;
+  color: var(--primary);
+  font-size: 1.2rem;
+  font-weight: 700;
+  padding: 9px 6px;
+  outline: none;
+  -moz-appearance: textfield;
+}
+.weight-input:focus { border-color: var(--primary); }
+.weight-input::-webkit-outer-spin-button,
+.weight-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.weight-unit { color: var(--text-muted); font-size: .88rem; }
+
+/* ── Bilateral Arm Angles ────────────────────────────────────────────────── */
+.bilateral-row {
+  display: flex;
+  gap: 8px;
+  max-width: 640px;
+  margin: 0 auto 6px;
+}
+.bilateral-chip {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  text-align: center;
+  transition: border-color .2s;
+}
+.bilateral-chip-label {
+  font-size: .72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.bilateral-chip-angle {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.bilateral-chip.active-side { border-color: var(--primary); }
+.bilateral-chip.active-side .bilateral-chip-angle { color: var(--primary); }
+
+/* ── Imbalance Warning ───────────────────────────────────────────────────── */
+.imbalance-warning {
+  font-size: .78rem;
+  color: #f59e0b;
+  text-align: center;
+  max-width: 640px;
+  margin: 0 auto 8px;
+  display: none;
+  min-height: 18px;
+}
+.imbalance-warning.active { display: block; }
+
+/* ── Manual Rep Row (tap + undo) ─────────────────────────────────────────── */
+.manual-rep-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  max-width: 340px;
+  margin-inline: auto;
+}
+.manual-rep-row .btn-tap-count,
+.manual-rep-row .btn-undo-rep {
+  flex: 1;
+  max-width: none;
+  margin-inline: 0;
+}
+
+/* ── Undo Rep Button ─────────────────────────────────────────────────────── */
+.btn-undo-rep {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  /* Matches .btn-tap-count exactly — the two sit side by side and a 4px height
+     difference between paired controls reads as a rendering bug. */
+  padding: 11px 16px;
+  background: transparent;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-size: .88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .15s, color .15s, background .15s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.btn-undo-rep:hover  { border-color: var(--danger); color: var(--danger); }
+.btn-undo-rep:active { background: rgba(239,68,68,.1); }
+.btn-undo-rep:disabled { opacity: .25; cursor: not-allowed; pointer-events: none; }
+
+/* ── Tap-to-Count Button ─────────────────────────────────────────────────── */
+.btn-tap-count {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  max-width: 640px;
+  margin: 10px auto 0;
+  background: var(--surface);
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 11px 16px;
+  color: var(--text-muted);
+  font-size: .88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .2s, color .2s, background .15s;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+/* No opacity here: --text-muted at 60% composites to 2.8:1, and this is the
+   sublabel on the manual counter — the control you reach for precisely when
+   the camera has stopped working. */
+.tap-count-sub {
+  font-size: .68rem;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.btn-tap-count:hover  { border-color: var(--primary); color: var(--primary); }
+.btn-tap-count:active { background: var(--primary-dim); }
+
+/* Urgent state — promoted to solid border + amber tint when quality is poor/none */
+.btn-tap-count.tap-urgent {
+  border-style: solid;
+  border-color: #ca8a04;
+  background: rgba(202,138,4,.08);
+  color: var(--text);
+}
+.btn-tap-count.tap-urgent:hover { border-color: var(--primary); background: var(--primary-dim); color: var(--primary); }
+
+/* ── RPE Overlay ─────────────────────────────────────────────────────────── */
+.rpe-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.85);
+  z-index: 600;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  backdrop-filter: blur(6px);
+}
+.rpe-overlay.active { display: flex; animation: screenFadeIn .18s ease; }
+.rpe-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 28px 24px;
+  width: 100%;
+  max-width: 360px;
+  text-align: center;
+}
+.rpe-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 6px;
+}
+.rpe-sub {
+  font-size: .78rem;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+  line-height: 1.4;
+}
+.rpe-grid {
+  display: grid;
+  /* minmax(0,1fr) — plain 1fr floors each column at its min-content width, which
+     the longest tag word blew past, pushing the buttons outside the dialog. */
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.rpe-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 10px 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface2);
+  color: var(--text);
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform .1s, filter .15s, box-shadow .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.rpe-num  { font-size: 1.3rem; font-weight: 800; line-height: 1; }
+.rpe-tag  { font-size: .62rem; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; opacity: .85; overflow-wrap: anywhere; }
+
+/* Color-coded RPE scale: green → yellow → red */
+.rpe-6  { border-color: #16a34a; background: rgba(22,163,74,.18);  }
+.rpe-7  { border-color: #65a30d; background: rgba(101,163,13,.18); }
+.rpe-8  { border-color: #ca8a04; background: rgba(202,138,4,.18);  }
+.rpe-9  { border-color: #ea580c; background: rgba(234,88,12,.18);  }
+.rpe-10 { border-color: #dc2626; background: rgba(220,38,38,.18);  }
+.rpe-6  .rpe-num { color: #4ade80; }
+.rpe-7  .rpe-num { color: #a3e635; }
+.rpe-8  .rpe-num { color: #fbbf24; }
+.rpe-9  .rpe-num { color: #fb923c; }
+.rpe-10 .rpe-num { color: #f87171; }
+
+.rpe-btn:hover  { filter: brightness(1.2); transform: scale(1.04); box-shadow: 0 4px 12px rgba(0,0,0,.4); }
+.rpe-btn:active { transform: scale(.93); }
+.rpe-skip {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: .85rem;
+  cursor: pointer;
+  text-decoration: underline;
+  font-family: inherit;
+  padding: 12px 16px;
+}
+.rpe-skip:hover { color: var(--text); }
+
+/* ── History Screen ──────────────────────────────────────────────────────── */
+#screen-history { padding: 16px 16px 40px; align-items: flex-start; }
+.history-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  width: 100%;
+  max-width: 640px;
+  align-self: center;
+}
+.history-list {
+  width: 100%;
+  max-width: 640px;
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.history-empty {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 40px 0;
+  font-size: .95rem;
+  line-height: 1.6;
+}
+.history-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+}
+.history-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.history-card-title { font-size: 1rem; font-weight: 700; }
+.history-card-date  { font-size: .75rem; color: var(--text-muted); flex-shrink: 0; }
+.history-card-meta  { display: flex; gap: 14px; font-size: .8rem; color: var(--text-muted); margin-bottom: 12px; }
+.history-exercise-list { display: flex; flex-direction: column; }
+.history-exercise-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: .88rem;
+  gap: 8px;
+}
+.history-exercise-row:last-child { border-bottom: none; padding-bottom: 0; }
+.history-exercise-name   { font-weight: 600; }
+.history-exercise-detail { font-size: .78rem; color: var(--text-muted); margin-top: 2px; }
+.history-exercise-stats  {
+  color: var(--primary);
+  font-weight: 700;
+  font-size: .85rem;
+  text-align: right;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+
+/* ── Previous Session Hint ───────────────────────────────────────────────── */
+.prev-session-hint {
+  font-size: .75rem;
+  color: var(--primary);
+  text-align: center;
+  padding: 2px 0 8px;
+  max-width: 640px;
+  margin-inline: auto;
+  opacity: .8;
+  letter-spacing: .01em;
+}
+
 /* ── Responsive: desktop (≥ 960px) ─────────────────────────────────────── */
 @media (min-width: 960px) {
   .screen { padding: 32px 40px 48px; }
 
-  /* Setup: two-column side by side */
-  .screen-inner { max-width: 960px; }
-
-  .setup-cols {
-    flex-direction: row;
-    align-items: flex-start;
-    gap: 28px;
-  }
-  .setup-col { flex: 1; min-width: 0; }
+  /* Setup stays one readable column — the mode tabs already split the two
+     workflows, so a second column would only re-create the ambiguity. */
+  .screen-inner { max-width: 620px; }
 
   /* Workout: camera left, stats right */
   #screen-workout { padding: 16px 40px 32px; }
@@ -727,11 +1178,432 @@ input.stepper-value::-webkit-inner-spin-button { -webkit-appearance: none; margi
   }
 
   /* Override element max-widths inside stats column */
+  .workout-stats-col .weight-row,
+  .workout-stats-col .prev-session-hint,
   .workout-stats-col .stats-row,
+  .workout-stats-col .bilateral-row,
+  .workout-stats-col .imbalance-warning,
   .workout-stats-col .rep-counter-block,
   .workout-stats-col .progress-section,
-  .workout-stats-col .workout-controls {
+  .workout-stats-col .workout-controls,
+  .workout-stats-col .btn-tap-count,
+  .workout-stats-col .btn-undo-rep,
+  .workout-stats-col .manual-rep-row,
+  .workout-camera-col .form-coach,
+  .workout-camera-col .camera-hint {
     max-width: 100%;
     margin-inline: 0;
   }
 }
+
+/* ── Live form coaching ───────────────────────────────────────────────────
+   --form-color is written from JS every frame and ramps red → amber → green
+   as the rep cycle completes, so the athlete can read their form from the
+   colour alone without parsing text mid-set. */
+.camera-wrapper {
+  box-shadow: 0 0 0 3px var(--form-color, transparent),
+              0 0 18px -2px var(--form-color, transparent);
+  transition: box-shadow .12s linear;
+}
+
+.form-coach {
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-gauge {
+  position: relative;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--surface2, rgba(255,255,255,.08));
+  overflow: hidden;
+}
+.form-gauge-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: var(--form-color, #ef4444);
+  transition: width .1s linear, background-color .12s linear;
+}
+/* Marks the halfway point of the cycle — the top of the lift, where the rep
+   is credited. Everything to the right of it is the return you still owe. */
+.form-gauge-mid {
+  position: absolute;
+  top: 0; bottom: 0; left: 50%;
+  width: 2px;
+  background: rgba(255,255,255,.45);
+  pointer-events: none;
+}
+
+.form-coach-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 24px;
+}
+.form-phase {
+  flex-shrink: 0;
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--surface2, rgba(255,255,255,.08));
+  color: var(--text-muted, #94a3b8);
+}
+.form-coach-text {
+  font-size: .92rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.form-coach-text.tone-good    { color: #22c55e; }
+.form-coach-text.tone-warn    { color: #f59e0b; }
+.form-coach-text.tone-bad     { color: #ef4444; }
+.form-coach-text.tone-neutral { color: var(--text-muted, #94a3b8); }
+
+/* A completed rep pulses once, so a glance catches it even mid-lift */
+@keyframes form-rep-pop {
+  0%   { transform: scale(1);    }
+  40%  { transform: scale(1.06); }
+  100% { transform: scale(1);    }
+}
+.form-coach-text.pop { animation: form-rep-pop .32s ease-out; }
+
+.form-rom-row { display: flex; gap: 8px; }
+.form-rom-chip {
+  flex: 1;
+  text-align: center;
+  font-size: .72rem;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: var(--surface2, rgba(255,255,255,.08));
+  color: var(--text-muted, #94a3b8);
+}
+.form-rom-chip b { color: var(--text, #e2e8f0); font-size: .82rem; }
+.form-rom-chip.lagging {
+  background: rgba(239,68,68,.18);
+  color: #fca5a5;
+}
+
+/* Reduced-motion users keep the colour signal but lose the animation */
+@media (prefers-reduced-motion: reduce) {
+  .form-coach-text.pop { animation: none; }
+  .form-gauge-fill, .camera-wrapper { transition: none; }
+}
+
+/* A completed rep flashes the camera frame green, overriding the live ramp for
+   REP_FLASH_MS so the moment of completion is unmissable. */
+.camera-wrapper.rep-complete {
+  --form-color: #22c55e !important;
+  box-shadow: 0 0 0 4px #22c55e, 0 0 26px -2px #22c55e;
+}
+
+/* ── Export / share block on the completion screen ────────────────────────── */
+.share-block {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  margin: 18px 0 4px;
+  background: var(--surface);
+}
+.share-title {
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+.share-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.share-actions .btn { flex: 1 1 auto; min-width: 130px; }
+.share-hint {
+  margin-top: 10px;
+  font-size: .76rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+.share-hint b { color: var(--text); }
+.share-hint.ok   { color: var(--primary); }
+.share-hint.fail { color: var(--danger); }
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SETUP SCREEN — mode switch and step-by-step panels
+   ─────────────────────────────────────────────────────────────────────────
+   The old setup screen put "one exercise" settings and "multi-exercise plan"
+   settings in two columns side by side, with a hidden dependency between them:
+   "+ Add Current Exercise" silently read the other column. A first-time user
+   could not tell which control affected which workout. The two workflows are
+   now separate tab panels that never overlap, and each panel is a numbered
+   sequence of steps ending in exactly one green Start button.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.mode-switch {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+.mode-tab {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 16px 10px;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--text-muted);
+  font-family: inherit;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color .18s, background .18s, color .18s;
+  -webkit-tap-highlight-color: transparent;
+}
+.mode-tab:hover { border-color: rgba(34,197,94,.45); }
+.mode-tab.active {
+  background: var(--primary-dim);
+  border-color: var(--primary);
+  color: var(--text);
+}
+.mode-tab-icon { font-size: 1.5rem; line-height: 1; }
+.mode-tab-name { font-size: .98rem; font-weight: 700; }
+.mode-tab.active .mode-tab-name { color: var(--primary); }
+.mode-tab-desc  { font-size: .72rem; line-height: 1.35; color: var(--text-muted); }
+
+.setup-panel { display: block; }
+.setup-panel[hidden] { display: none; }
+.setup-panel:focus { outline: none; }
+
+/* Numbered step marker inside a card heading */
+.card-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px; height: 20px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #000;
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+.badge-optional {
+  font-size: .62rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.stepper-hint {
+  font-size: .68rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 6px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* Rest-between-sets field, full width under the two steppers */
+.rest-field {
+  margin-top: 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 12px;
+  text-align: center;
+}
+.rest-field label {
+  display: block;
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: 10px;
+}
+.stepper-row-inline { justify-content: center; gap: 12px; }
+.rest-unit { font-size: .8rem; color: var(--text-muted); margin-left: -6px; }
+
+/* The one unambiguous action on each panel */
+.btn-go {
+  font-size: 1.05rem;
+  padding: 18px 24px;
+  margin-top: 4px;
+}
+.go-summary {
+  text-align: center;
+  font-size: .82rem;
+  color: var(--text-muted);
+  margin-top: 10px;
+  min-height: 20px;
+  line-height: 1.5;
+}
+
+/* Secondary, foldable blocks — presets and saved workouts start closed so the
+   primary path is the only thing on screen for a first-time user. */
+.card-collapsible { padding: 0; margin-top: 18px; }
+.card-collapsible > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 16px 18px;
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card-collapsible > summary::-webkit-details-marker { display: none; }
+.card-collapsible > summary::before {
+  content: '+';
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--primary);
+  width: 14px;
+}
+.card-collapsible[open] > summary::before { content: '\2212'; }
+.card-collapsible[open] > summary { border-bottom: 1px solid var(--border); }
+.collapsible-body { padding: 16px 18px 18px; }
+
+.field-block { margin-bottom: 10px; }
+.field-block label {
+  display: block;
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: 6px;
+}
+.btn-block  { width: 100%; }
+.btn-inline { width: auto; flex-shrink: 0; padding: 12px 20px; }
+.btn-pair   { display: flex; gap: 8px; }
+.btn-pair .btn { flex: 1; }
+
+/* ── Plan builder: its own exercise picker, so nothing is read from elsewhere */
+.plan-add {
+  margin-top: 14px;
+  background: var(--surface2);
+  border: 1px dashed var(--border-input);
+  border-radius: var(--radius);
+  padding: 14px 12px;
+}
+.plan-add-title {
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: 10px;
+}
+.plan-add-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0 8px;
+}
+.plan-add-fields .plan-field-label { flex-direction: column; align-items: flex-start; gap: 4px; }
+.plan-add-legend {
+  font-size: .7rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+.plan-add-legend b { color: var(--text); font-weight: 700; }
+.plan-summary-line {
+  font-size: .8rem;
+  color: var(--primary);
+  font-weight: 600;
+  margin-top: 10px;
+  min-height: 20px;
+}
+
+.camera-hint-setup { margin: 10px 0 0; max-width: none; }
+.profile-bar-sep { color: var(--border-input); }
+
+.rep-counter-emoji { font-size: 3rem; opacity: .25; }
+.complete-stat-total { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 12px; }
+.history-header-title { flex: 1; text-align: center; }
+
+@media (max-width: 380px) {
+  .mode-tab { padding: 13px 6px; }
+  .mode-tab-desc { font-size: .68rem; }
+}
+
+
+/* ── Plan rows: collapsed one-liner, tap to edit ───────────────────────────
+   Four editable number fields per exercise made a six-exercise workout about
+   2500px tall on a phone — you could not see your own session without scrolling
+   through it. The row now says what it does in one line and opens on tap. */
+.plan-item {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.plan-item-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 12px;
+  background: none;
+  border: none;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.plan-item-head:hover { background: rgba(255,255,255,.03); }
+.plan-item-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: rgba(129,140,248,.16);
+  color: #818cf8;              /* 5.3:1 on --surface2; var(--accent) was 3.5:1 */
+  font-size: .72rem;
+  font-weight: 800;
+}
+.plan-item-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.plan-item-name  { font-size: .92rem; font-weight: 600; color: var(--text); }
+.plan-item-recap { font-size: .74rem; color: var(--text-muted); }
+.plan-item-chevron {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  transition: transform .18s ease;
+}
+.plan-item-head.open .plan-item-chevron { transform: rotate(180deg); }
+.plan-item-edit {
+  padding: 0 12px 12px;
+  border-top: 1px solid var(--border);
+  margin-top: 0;
+  padding-top: 12px;
+}
+.plan-item-edit[hidden] { display: none; }
+.plan-item-actions { display: flex; gap: 8px; }
+.plan-item-actions .btn { flex: 1; padding-inline: 6px; }
+
+.preset-plan-desc { font-size: .78rem; color: var(--text-muted); margin-top: 10px; line-height: 1.5; min-height: 18px; }
