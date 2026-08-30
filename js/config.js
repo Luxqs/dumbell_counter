@@ -3,9 +3,9 @@ const EXERCISES = [
     id: 'bench-press',
     fitCategory: 0,             // FIT exercise_category: bench_press
     name: 'Bench Press (Dumbbell)',
-    description: 'Press dumbbells up from chest while lying back',
-    tips: 'Plant feet firmly, slight arch, press to full lockout.',
-    cameraHint: '📷 Side view · camera at shoulder height',
+    description: 'Tlak činiek nahor z hrudníka v ľahu',
+    tips: 'Nohy pevne na zemi, mierne prehnutie chrbta, tlač do úplného vystretia.',
+    cameraHint: '📷 Bočný pohľad · kamera vo výške ramien',
     joints: { a: 'shoulder', b: 'elbow', c: 'wrist' },
     counting: {
       direction:     'increase',
@@ -16,17 +16,17 @@ const EXERCISES = [
       minRepMs:      800,  // faster than this = momentum, flagged as a sloppy rep
     },
     cues: {
-      concentric: 'Press higher — lock the elbows out',
-      eccentric:  'Lower to your chest under control',
+      concentric: 'Tlač vyššie — vystri lakte',
+      eccentric:  'Spúšťaj k hrudníku kontrolovane',
     }
   },
   {
     id: 'bicep-curl',
     fitCategory: 7,             // FIT exercise_category: curl
     name: 'Bicep Curl',
-    description: 'Curl dumbbells toward shoulders',
-    tips: 'Keep elbows close to body, full range of motion.',
-    cameraHint: '📷 Side view · camera at waist height',
+    description: 'Zdvíhanie činiek k ramenám',
+    tips: 'Lakte drž pri tele, choď do plného rozsahu.',
+    cameraHint: '📷 Bočný pohľad · kamera vo výške pásu',
     joints: { a: 'shoulder', b: 'elbow', c: 'wrist' },
     counting: {
       direction:     'decrease',
@@ -37,8 +37,8 @@ const EXERCISES = [
       minRepMs:      800,  // faster than this = momentum, flagged as a sloppy rep
     },
     cues: {
-      concentric: 'Curl higher — squeeze at the top',
-      eccentric:  'Straighten the arm fully at the bottom',
+      concentric: 'Zdvihni vyššie — hore stiahni',
+      eccentric:  'Dole vystri ruku úplne',
     }
   },
   {
@@ -46,9 +46,9 @@ const EXERCISES = [
     fitCategory: 7,             // FIT exercise_category: curl
     name: 'Concentration Curl',
     unilateral: true,           // one arm works, the other is idle
-    description: 'Seated curl with elbow braced on inner thigh',
-    tips: 'Plant elbow firmly on thigh, curl slowly and squeeze hard at the top.',
-    cameraHint: '📷 Side view · camera at knee height',
+    description: 'Zdvih v sede s lakťom opretým o vnútro stehna',
+    tips: 'Lakeť pevne opri o stehno, zdvíhaj pomaly a silno stiahni na vrchole.',
+    cameraHint: '📷 Bočný pohľad · kamera vo výške kolien',
     joints: { a: 'shoulder', b: 'elbow', c: 'wrist' },
     counting: {
       direction:     'decrease',
@@ -59,17 +59,17 @@ const EXERCISES = [
       minRepMs:      900,  // faster than this = momentum, flagged as a sloppy rep
     },
     cues: {
-      concentric: 'Curl higher — squeeze hard at the top',
-      eccentric:  'Straighten the arm fully at the bottom',
+      concentric: 'Zdvihni vyššie — hore silno stiahni',
+      eccentric:  'Dole vystri ruku úplne',
     }
   },
   {
     id: 'decline-pushup',
     fitCategory: 22,            // FIT exercise_category: push_up
     name: 'Decline Push-up',
-    description: 'Push-up with feet elevated on a chair or bench',
-    tips: 'Keep body straight, hands shoulder-width, lower chest to ground.',
-    cameraHint: '📷 Side view · camera at floor level',
+    description: 'Klik s nohami vyloženými na stoličke alebo lavičke',
+    tips: 'Telo v jednej línii, ruky na šírku ramien, hrudník spusti k zemi.',
+    cameraHint: '📷 Bočný pohľad · kamera pri zemi',
     joints: { a: 'shoulder', b: 'elbow', c: 'wrist' },
     counting: {
       direction:     'increase',
@@ -80,17 +80,17 @@ const EXERCISES = [
       minRepMs:      800,  // faster than this = momentum, flagged as a sloppy rep
     },
     cues: {
-      concentric: 'Push all the way up to lockout',
-      eccentric:  'Lower your chest closer to the floor',
+      concentric: 'Vytlač sa úplne hore',
+      eccentric:  'Spusti hrudník nižšie k zemi',
     }
   },
   {
     id: 'dumbbell-fly',
     fitCategory: 9,             // FIT exercise_category: flye
     name: 'Dumbbell Fly',
-    description: 'Open arms wide and squeeze together at the top',
-    tips: 'Slight bend in elbows throughout, lower with control, squeeze chest at top.',
-    cameraHint: '📷 Front view · camera at chest height',
+    description: 'Rozovretie rúk do strán a stiahnutie k sebe',
+    tips: 'Lakte stále mierne pokrčené, spúšťaj kontrolovane, hore stiahni hrudník.',
+    cameraHint: '📷 Čelný pohľad · kamera vo výške hrudníka',
     joints: { a: 'hip', b: 'shoulder', c: 'elbow' },
     counting: {
       direction:     'decrease',
@@ -101,8 +101,8 @@ const EXERCISES = [
       minRepMs:      900,  // faster than this = momentum, flagged as a sloppy rep
     },
     cues: {
-      concentric: 'Squeeze further — bring them together',
-      eccentric:  'Open wider for a full chest stretch',
+      concentric: 'Stiahni viac — spoj ruky',
+      eccentric:  'Rozovri viac, natiahni hrudník',
     }
   },
   {
@@ -110,9 +110,9 @@ const EXERCISES = [
     fitCategory: 23,            // FIT exercise_category: row
     name: 'Dumbbell Row',
     unilateral: true,           // one arm works, the other braces
-    description: 'Bent-over single-arm row pulling dumbbell to hip',
-    tips: 'Flat back, brace core, pull elbow back toward the ceiling.',
-    cameraHint: '📷 Side view · camera at hip height',
+    description: 'Príťah jednou rukou v predklone k bedru',
+    tips: 'Rovný chrbát, spevni stred tela, lakeť ťahaj dozadu k stropu.',
+    cameraHint: '📷 Bočný pohľad · kamera vo výške bokov',
     joints: { a: 'shoulder', b: 'elbow', c: 'wrist' },
     counting: {
       direction:     'decrease',
@@ -123,17 +123,17 @@ const EXERCISES = [
       minRepMs:      800,  // faster than this = momentum, flagged as a sloppy rep
     },
     cues: {
-      concentric: 'Pull the elbow further back',
-      eccentric:  'Let the arm hang fully at the bottom',
+      concentric: 'Ťahaj lakeť viac dozadu',
+      eccentric:  'Dole nechaj ruku úplne visieť',
     }
   },
   {
     id: 'goblet-squat',
     fitCategory: 28,            // FIT exercise_category: squat
     name: 'Goblet Squat',
-    description: 'Hold one dumbbell at chest and squat deep',
-    tips: 'Chest up, knees track toes, push hips back and down, heels stay flat.',
-    cameraHint: '📷 Side view · camera at hip height',
+    description: 'Drep s jednou činkou držanou pri hrudníku',
+    tips: 'Hrudník hore, kolená v línii špičiek, boky dozadu a dole, päty na zemi.',
+    cameraHint: '📷 Bočný pohľad · kamera vo výške bokov',
     joints: { a: 'hip', b: 'knee', c: 'ankle' },
     counting: {
       direction:     'decrease',
@@ -144,17 +144,17 @@ const EXERCISES = [
       minRepMs:      1000,  // faster than this = momentum, flagged as a sloppy rep
     },
     cues: {
-      concentric: 'Sit deeper — thighs to parallel',
-      eccentric:  'Stand all the way up and lock out',
+      concentric: 'Klesni nižšie — stehná do vodorovnej',
+      eccentric:  'Postav sa úplne a vystri',
     }
   },
   {
     id: 'hammer-curl',
     fitCategory: 7,             // FIT exercise_category: curl
     name: 'Hammer Curl',
-    description: 'Neutral-grip curl with thumbs facing up',
-    tips: 'Keep thumbs up throughout, elbows stationary, full range of motion.',
-    cameraHint: '📷 Side view · camera at waist height',
+    description: 'Zdvih s neutrálnym úchopom, palce nahor',
+    tips: 'Palce stále hore, lakte bez pohybu, plný rozsah.',
+    cameraHint: '📷 Bočný pohľad · kamera vo výške pásu',
     joints: { a: 'shoulder', b: 'elbow', c: 'wrist' },
     counting: {
       direction:     'decrease',
@@ -165,17 +165,17 @@ const EXERCISES = [
       minRepMs:      800,  // faster than this = momentum, flagged as a sloppy rep
     },
     cues: {
-      concentric: 'Curl higher — thumbs toward the shoulder',
-      eccentric:  'Straighten the arm fully at the bottom',
+      concentric: 'Zdvihni vyššie — palce k ramenu',
+      eccentric:  'Dole vystri ruku úplne',
     }
   },
   {
     id: 'lunge',
     fitCategory: 17,            // FIT exercise_category: lunge
     name: 'Dumbbell Lunge',
-    description: 'Step forward into a deep lunge holding dumbbells at sides',
-    tips: 'Front knee stays over ankle, back knee nearly touches floor, torso upright.',
-    cameraHint: '📷 Side view · camera at hip height',
+    description: 'Výpad vpred s činkami pri bokoch',
+    tips: 'Predné koleno nad členkom, zadné takmer po zem, trup vzpriamený.',
+    cameraHint: '📷 Bočný pohľad · kamera vo výške bokov',
     joints: { a: 'hip', b: 'knee', c: 'ankle' },
     counting: {
       direction:     'decrease',
@@ -186,17 +186,17 @@ const EXERCISES = [
       minRepMs:      1000,  // faster than this = momentum, flagged as a sloppy rep
     },
     cues: {
-      concentric: 'Drop the back knee lower',
-      eccentric:  'Drive all the way back up to standing',
+      concentric: 'Zadné koleno spusti nižšie',
+      eccentric:  'Vytlač sa úplne späť do stoja',
     }
   },
   {
     id: 'reverse-fly',
     fitCategory: 9,             // FIT exercise_category: flye
     name: 'Incline Reverse Fly',
-    description: 'Bent-over lateral raises for rear deltoids',
-    tips: 'Bend forward at hips ~45°, raise arms out to sides.',
-    cameraHint: '📷 Rear or side view · camera at hip height',
+    description: 'Rozpažovanie v predklone na zadné delty',
+    tips: 'Predklon v bedrách asi 45°, ruky dvíhaj do strán.',
+    cameraHint: '📷 Zozadu alebo z boku · kamera vo výške bokov',
     joints: { a: 'hip', b: 'shoulder', c: 'elbow' },
     counting: {
       direction:     'increase',
@@ -207,17 +207,17 @@ const EXERCISES = [
       minRepMs:      800,  // faster than this = momentum, flagged as a sloppy rep
     },
     cues: {
-      concentric: 'Raise the arms higher — squeeze the rear delts',
-      eccentric:  'Lower under control, no swinging',
+      concentric: 'Zdvihni ruky vyššie — stiahni zadné delty',
+      eccentric:  'Spúšťaj kontrolovane, nehojdaj',
     }
   },
   {
     id: 'lateral-raise',
     fitCategory: 14,            // FIT exercise_category: lateral_raise
     name: 'Lateral Raise',
-    description: 'Raise dumbbells out to shoulder height from sides',
-    tips: 'Slight bend in elbows, lead with elbows not hands.',
-    cameraHint: '📷 Front view · camera at shoulder height',
+    description: 'Rozpažovanie do výšky ramien',
+    tips: 'Lakte mierne pokrčené, veď pohyb lakťami, nie dlaňami.',
+    cameraHint: '📷 Čelný pohľad · kamera vo výške ramien',
     joints: { a: 'hip', b: 'shoulder', c: 'elbow' },
     counting: {
       direction:     'increase',
@@ -228,17 +228,17 @@ const EXERCISES = [
       minRepMs:      800,  // faster than this = momentum, flagged as a sloppy rep
     },
     cues: {
-      concentric: 'Raise to shoulder height',
-      eccentric:  'Lower all the way down, no bouncing',
+      concentric: 'Zdvihni do výšky ramien',
+      eccentric:  'Spusti úplne dole, bez odrazu',
     }
   },
   {
     id: 'pullup',
     fitCategory: 21,            // FIT exercise_category: pull_up
     name: 'Pull-up',
-    description: 'Vertical pull from dead hang to chin above bar',
-    tips: 'Dead hang start, pull elbows down toward hips, chin clears the bar.',
-    cameraHint: '📷 Side view · camera at bar height',
+    description: 'Zhyb z visu až po bradu nad hrazdou',
+    tips: 'Začni z úplného visu, lakte ťahaj k bokom, brada nad hrazdu.',
+    cameraHint: '📷 Bočný pohľad · kamera vo výške hrazdy',
     joints: { a: 'shoulder', b: 'elbow', c: 'wrist' },
     counting: {
       direction:     'decrease',
@@ -249,17 +249,17 @@ const EXERCISES = [
       minRepMs:      1000,  // faster than this = momentum, flagged as a sloppy rep
     },
     cues: {
-      concentric: 'Pull higher — chin over the bar',
-      eccentric:  'Full dead hang at the bottom',
+      concentric: 'Ťahaj vyššie — brada nad hrazdu',
+      eccentric:  'Dole úplný vis',
     }
   },
   {
     id: 'romanian-deadlift',
     fitCategory: 8,             // FIT exercise_category: deadlift
     name: 'Romanian Deadlift',
-    description: 'Hip hinge lowering dumbbells along the legs',
-    tips: 'Soft bend in knees, hinge at hips not waist, feel hamstring stretch at bottom.',
-    cameraHint: '📷 Side view · camera at hip height',
+    description: 'Predklon v bedrách so spúšťaním činiek pozdĺž nôh',
+    tips: 'Kolená mierne pokrčené, ohyb v bedrách nie v páse, dole cíť ťah v zadnej strane stehien.',
+    cameraHint: '📷 Bočný pohľad · kamera vo výške bokov',
     joints: { a: 'shoulder', b: 'hip', c: 'knee' },
     counting: {
       direction:     'decrease',
@@ -270,17 +270,17 @@ const EXERCISES = [
       minRepMs:      1000,  // faster than this = momentum, flagged as a sloppy rep
     },
     cues: {
-      concentric: 'Hinge further — push the hips back',
-      eccentric:  'Stand tall and squeeze the glutes',
+      concentric: 'Ohni sa viac — boky dozadu',
+      eccentric:  'Vystri sa a stiahni zadok',
     }
   },
   {
     id: 'shoulder-press',
     fitCategory: 24,            // FIT exercise_category: shoulder_press
     name: 'Shoulder Press',
-    description: 'Press dumbbells overhead from shoulder height',
-    tips: 'Start with elbows at ~90°, press straight up to full lockout.',
-    cameraHint: '📷 Side or front view · camera at shoulder height',
+    description: 'Tlak činiek nad hlavu z výšky ramien',
+    tips: 'Začni s lakťami asi na 90°, tlač priamo hore do úplného vystretia.',
+    cameraHint: '📷 Z boku alebo spredu · kamera vo výške ramien',
     joints: { a: 'shoulder', b: 'elbow', c: 'wrist' },
     counting: {
       direction:     'increase',
@@ -291,17 +291,17 @@ const EXERCISES = [
       minRepMs:      800,  // faster than this = momentum, flagged as a sloppy rep
     },
     cues: {
-      concentric: 'Press to full overhead lockout',
-      eccentric:  'Lower to shoulder height',
+      concentric: 'Tlač nad hlavu do úplného vystretia',
+      eccentric:  'Spusti do výšky ramien',
     }
   },
   {
     id: 'skullcrusher',
     fitCategory: 30,            // FIT exercise_category: triceps_extension
     name: 'Skullcrusher',
-    description: 'Lying tricep extension lowering dumbbells toward forehead',
-    tips: 'Keep upper arms vertical and still, only forearms move, controlled descent.',
-    cameraHint: '📷 Side view · camera at head height',
+    description: 'Extenzia tricepsu v ľahu smerom k čelu',
+    tips: 'Nadlaktia drž zvisle a bez pohybu, hýbu sa len predlaktia, spúšťaj kontrolovane.',
+    cameraHint: '📷 Bočný pohľad · kamera vo výške hlavy',
     joints: { a: 'shoulder', b: 'elbow', c: 'wrist' },
     counting: {
       direction:     'increase',
@@ -312,17 +312,17 @@ const EXERCISES = [
       minRepMs:      800,  // faster than this = momentum, flagged as a sloppy rep
     },
     cues: {
-      concentric: 'Extend the elbows fully',
-      eccentric:  'Lower toward your forehead slowly',
+      concentric: 'Úplne vystri lakte',
+      eccentric:  'Spúšťaj pomaly k čelu',
     }
   },
   {
     id: 'tricep-extension',
     fitCategory: 30,            // FIT exercise_category: triceps_extension
     name: 'Tricep Extension',
-    description: 'Overhead tricep extension with dumbbell',
-    tips: 'Keep upper arms vertical and still, only forearms move.',
-    cameraHint: '📷 Side view · camera at shoulder height',
+    description: 'Extenzia tricepsu s činkou nad hlavou',
+    tips: 'Nadlaktia drž zvisle a bez pohybu, hýbu sa len predlaktia.',
+    cameraHint: '📷 Bočný pohľad · kamera vo výške ramien',
     joints: { a: 'shoulder', b: 'elbow', c: 'wrist' },
     counting: {
       direction:     'increase',
@@ -333,8 +333,8 @@ const EXERCISES = [
       minRepMs:      800,  // faster than this = momentum, flagged as a sloppy rep
     },
     cues: {
-      concentric: 'Straighten the arms fully overhead',
-      eccentric:  'Lower behind your head under control',
+      concentric: 'Úplne vystri ruky nad hlavou',
+      eccentric:  'Spúšťaj za hlavu kontrolovane',
     }
   },
 ];
@@ -343,8 +343,8 @@ const EXERCISES = [
 const PRESET_PLANS = [
   {
     id: 'arms-blast',
-    name: 'Arms Blast',
-    description: 'Dedicated biceps & triceps hypertrophy session',
+    name: 'Ruky naplno',
+    description: 'Tréning zameraný len na biceps a triceps',
     plan: [
       { exerciseId: 'bicep-curl',          sets: 4, reps: 12, restBetweenSets: 60, restAfterExercise: 90 },
       { exerciseId: 'hammer-curl',         sets: 3, reps: 12, restBetweenSets: 60, restAfterExercise: 90 },
@@ -356,7 +356,7 @@ const PRESET_PLANS = [
   {
     id: 'arnold-blueprint',
     name: 'Arnold Blueprint',
-    description: 'Arnold-inspired high-volume upper-body split',
+    description: 'Objemový tréning vrchnej časti tela inšpirovaný Arnoldom',
     plan: [
       { exerciseId: 'bench-press',      sets: 5, reps: 10, restBetweenSets: 90, restAfterExercise: 120 },
       { exerciseId: 'dumbbell-fly',     sets: 5, reps: 10, restBetweenSets: 60, restAfterExercise: 90 },
@@ -368,8 +368,8 @@ const PRESET_PLANS = [
   },
   {
     id: 'beginner-full-body',
-    name: 'Beginner Full Body',
-    description: 'Classic 3-day/week full-body routine for beginners',
+    name: 'Celé telo pre začiatočníkov',
+    description: 'Klasická trojfázová zostava na celé telo, 3× do týždňa',
     plan: [
       { exerciseId: 'goblet-squat',     sets: 3, reps: 12, restBetweenSets: 60, restAfterExercise: 90 },
       { exerciseId: 'shoulder-press',   sets: 3, reps: 10, restBetweenSets: 60, restAfterExercise: 90 },
@@ -381,8 +381,8 @@ const PRESET_PLANS = [
   },
   {
     id: 'lower-body',
-    name: 'Lower Body Dumbbells',
-    description: 'Quad, hamstring & glute session with dumbbells',
+    name: 'Spodná časť tela',
+    description: 'Stehná, zadná strana stehien a zadok s činkami',
     plan: [
       { exerciseId: 'goblet-squat',      sets: 4, reps: 12, restBetweenSets: 90, restAfterExercise: 120 },
       { exerciseId: 'romanian-deadlift', sets: 4, reps: 10, restBetweenSets: 90, restAfterExercise: 120 },
@@ -391,8 +391,8 @@ const PRESET_PLANS = [
   },
   {
     id: 'ppl-pull',
-    name: 'PPL – Pull Day',
-    description: 'Push/Pull/Legs split: back & biceps session',
+    name: 'PPL – Pull (ťah)',
+    description: 'Split Push/Pull/Legs: chrbát a biceps',
     plan: [
       { exerciseId: 'pullup',             sets: 4, reps: 8,  restBetweenSets: 90, restAfterExercise: 120 },
       { exerciseId: 'dumbbell-row',       sets: 4, reps: 10, restBetweenSets: 90, restAfterExercise: 90 },
@@ -404,8 +404,8 @@ const PRESET_PLANS = [
   },
   {
     id: 'ppl-push',
-    name: 'PPL – Push Day',
-    description: 'Push/Pull/Legs split: chest, shoulders & triceps',
+    name: 'PPL – Push (tlak)',
+    description: 'Split Push/Pull/Legs: hrudník, ramená a triceps',
     plan: [
       { exerciseId: 'bench-press',      sets: 4, reps: 10, restBetweenSets: 90, restAfterExercise: 120 },
       { exerciseId: 'shoulder-press',   sets: 3, reps: 10, restBetweenSets: 90, restAfterExercise: 90 },
@@ -417,8 +417,8 @@ const PRESET_PLANS = [
   },
   {
     id: 'ppl-legs',
-    name: 'PPL – Legs Day',
-    description: 'Push/Pull/Legs split: full lower body session',
+    name: 'PPL – Legs (nohy)',
+    description: 'Split Push/Pull/Legs: celá spodná časť tela',
     plan: [
       { exerciseId: 'goblet-squat',      sets: 4, reps: 10, restBetweenSets: 90, restAfterExercise: 120 },
       { exerciseId: 'romanian-deadlift', sets: 4, reps: 10, restBetweenSets: 90, restAfterExercise: 120 },
@@ -427,8 +427,8 @@ const PRESET_PLANS = [
   },
   {
     id: 'shoulder-sculpt',
-    name: 'Shoulder Sculpt',
-    description: 'Complete shoulder development: front, side & rear delts',
+    name: 'Ramená do tvaru',
+    description: 'Kompletné ramená: predné, bočné aj zadné delty',
     plan: [
       { exerciseId: 'shoulder-press', sets: 4, reps: 10, restBetweenSets: 90, restAfterExercise: 90 },
       { exerciseId: 'lateral-raise',  sets: 4, reps: 15, restBetweenSets: 60, restAfterExercise: 90 },
@@ -437,8 +437,8 @@ const PRESET_PLANS = [
   },
   {
     id: 'strength-5x5',
-    name: '5×5 Strength',
-    description: 'Heavy compound movements — 5 sets × 5 reps for strength gains',
+    name: '5×5 Sila',
+    description: 'Ťažké komplexné cviky — 5 sérií po 5 opakovaniach na silu',
     plan: [
       { exerciseId: 'goblet-squat',   sets: 5, reps: 5, restBetweenSets: 180, restAfterExercise: 180 },
       { exerciseId: 'bench-press',    sets: 5, reps: 5, restBetweenSets: 180, restAfterExercise: 180 },

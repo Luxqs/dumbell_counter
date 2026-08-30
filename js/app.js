@@ -251,7 +251,7 @@ class App {
   _populatePresets() {
     const sel   = this.setup.presetSelect;
     const names = this.wm.list();
-    sel.innerHTML = '<option value="">— Load preset —</option>';
+    sel.innerHTML = '<option value="">— Vyber predvoľbu —</option>';
     names.forEach(n => {
       const opt = document.createElement('option');
       opt.value = n;
@@ -265,7 +265,7 @@ class App {
   _populatePlanSelect() {
     const sel   = this.setup.planSelect;
     const names = this.wpm.list();
-    sel.innerHTML = '<option value="">— Load saved plan —</option>';
+    sel.innerHTML = '<option value="">— Vyber uložený tréning —</option>';
     names.forEach(n => {
       const opt = document.createElement('option');
       opt.value = n;
@@ -276,7 +276,7 @@ class App {
 
   _populatePresetPlans() {
     const sel = this.setup.presetPlanSelect;
-    sel.innerHTML = '<option value="">— Choose a template —</option>';
+    sel.innerHTML = '<option value="">— Vyber šablónu —</option>';
     PRESET_PLANS.forEach(p => {
       const opt = document.createElement('option');
       opt.value = p.id;
@@ -295,7 +295,7 @@ class App {
     const tpl = PRESET_PLANS.find(p => p.id === this.setup.presetPlanSelect.value);
     if (!tpl) { el.textContent = ''; return; }
     const sets = tpl.plan.reduce((n, it) => n + it.sets, 0);
-    el.textContent = `${tpl.description} · ${tpl.plan.length} exercises · ${sets} sets`;
+    el.textContent = `${tpl.description} · ${tpl.plan.length} cvikov · ${sets} sérií`;
   }
 
   _updateTips() {
@@ -316,8 +316,8 @@ class App {
     const sets = this.targetSets, reps = this.targetReps, rest = this.restBetweenSets;
     if (!ex) { el.textContent = ''; return; }
     const mins = Math.max(1, Math.round((sets * reps * 3 + (sets - 1) * rest) / 60));
-    el.textContent = `${sets} × ${reps} reps of ${ex.name}, `
-                   + `${rest ? `${rest}s rest between sets` : 'no rest between sets'} · about ${mins} min`;
+    el.textContent = `${sets} × ${reps} opakovaní cviku ${ex.name}, `
+                   + `${rest ? `pauza ${rest} s medzi sériami` : 'bez pauzy medzi sériami'} · asi ${mins} min`;
   }
 
   // Same idea for the plan panel: total work, in words, before you commit.
@@ -329,8 +329,8 @@ class App {
     const sets = plan.reduce((n, it) => n + it.sets, 0);
     const secs = plan.reduce((t, it) =>
       t + it.sets * it.reps * 3 + (it.sets - 1) * it.restBetweenSets + (it.restAfterExercise ?? 0), 0);
-    el.textContent = `${plan.length} exercise${plan.length !== 1 ? 's' : ''} · ${sets} sets · `
-                   + `about ${Math.max(1, Math.round(secs / 60))} min`;
+    el.textContent = `${plan.length} ${plan.length === 1 ? 'cvik' : plan.length < 5 ? 'cviky' : 'cvikov'} · `
+                   + `${sets} sérií · asi ${Math.max(1, Math.round(secs / 60))} min`;
   }
 
   _renderPlanList() {
@@ -338,8 +338,8 @@ class App {
     list.innerHTML = '';
 
     if (this.workoutPlan.length === 0) {
-      list.innerHTML = '<p class="plan-empty">Nothing here yet — load a template above, '
-                     + 'or add your first exercise below.</p>';
+      list.innerHTML = '<p class="plan-empty">Zatiaľ prázdne — načítaj hore šablónu '
+                     + 'alebo dole pridaj prvý cvik.</p>';
       this.setup.btnStartPlan.disabled = true;
       this._updatePlanSummary();
       return;
@@ -382,11 +382,11 @@ class App {
           </div>
           <div class="plan-item-actions">
             <button type="button" class="btn btn-secondary btn-sm" data-action="up"   data-idx="${i}"
-                    aria-label="Move ${exName} earlier">↑ Up</button>
+                    aria-label="Posunúť ${exName} vyššie">↑ Hore</button>
             <button type="button" class="btn btn-secondary btn-sm" data-action="down" data-idx="${i}"
-                    aria-label="Move ${exName} later">↓ Down</button>
+                    aria-label="Posunúť ${exName} nižšie">↓ Dole</button>
             <button type="button" class="btn btn-danger btn-sm" data-action="remove"  data-idx="${i}"
-                    aria-label="Remove ${exName} from the workout">✕ Remove</button>
+                    aria-label="Odobrať ${exName} z tréningu">✕ Odobrať</button>
           </div>
         </div>
       `;
@@ -443,8 +443,8 @@ class App {
   // One honest sentence per plan row, so the collapsed list is still readable.
   _planItemRecap(item) {
     const after = item.restAfterExercise ?? 60;
-    return `${item.sets} sets × ${item.reps} reps · ${item.restBetweenSets}s rest`
-         + (after ? ` · ${after}s after` : '');
+    return `${item.sets} × ${item.reps} · pauza ${item.restBetweenSets} s`
+         + (after ? ` · po cviku ${after} s` : '');
   }
 
   // ── Profile Modal ────────────────────────────────────────────────────────
@@ -457,7 +457,7 @@ class App {
       this.profileNameInput.value = '';
       this._applyActiveProfile();
       this._hideProfileModal();
-      this._toast(`Profile "${name}" selected!`);
+      this._toast(`Profil „${name}“ je aktívny`);
     });
 
     this.profileNameInput.addEventListener('keydown', e => {
@@ -501,7 +501,7 @@ class App {
     this.profileList.innerHTML = '';
 
     if (names.length === 0) {
-      this.profileList.innerHTML = '<p class="profile-empty">No profiles yet — create one below.</p>';
+      this.profileList.innerHTML = '<p class="profile-empty">Zatiaľ žiadny profil — vytvor si ho nižšie.</p>';
       return;
     }
 
@@ -514,9 +514,9 @@ class App {
         <span class="profile-item-name">${safeName}</span>
         <div class="profile-item-actions">
           <button class="btn btn-secondary btn-inline" style="padding:11px 14px; font-size:.85rem;"
-                  aria-label="Use profile ${safeName}">Select</button>
-          <button class="btn-icon danger" title="Delete profile"
-                  aria-label="Delete profile ${safeName}">✕</button>
+                  aria-label="Použiť profil ${safeName}">Vybrať</button>
+          <button class="btn-icon danger" title="Zmazať profil"
+                  aria-label="Zmazať profil ${safeName}">✕</button>
         </div>
       `;
       // Use DOM methods for event binding — avoids data-attribute XSS vectors
@@ -524,10 +524,10 @@ class App {
         this.profiles.setActive(name);
         this._applyActiveProfile();
         this._hideProfileModal();
-        this._toast(`Profile "${name}" selected!`);
+        this._toast(`Profil „${name}“ je aktívny`);
       });
       div.querySelector('.btn-icon.danger').addEventListener('click', () => {
-        if (!confirm(`Delete profile "${name}"? This does NOT delete your workout data.`)) return;
+        if (!confirm(`Zmazať profil „${name}“? Tvoje tréningové dáta sa NEZMAŽÚ.`)) return;
         this.profiles.delete(name);
         if (!this.profiles.getActive()) this._applyActiveProfile();
         this._renderProfileList();
@@ -576,7 +576,7 @@ class App {
 
   _showRPEPrompt(setNum, totalSets) {
     const heading = this.rpeOverlay.querySelector('.rpe-title');
-    if (heading) heading.textContent = `Set ${setNum} of ${totalSets} — How hard was that?`;
+    if (heading) heading.textContent = `Séria ${setNum} z ${totalSets} — Aké to bolo ťažké?`;
     this.rpeOverlay.classList.add('active');
     // Without this, an opaque sheet covers the screen while focus is still on a
     // button behind it: Tab walks invisible controls and there is no way out.
@@ -635,7 +635,7 @@ class App {
       this.wm.save(name, { exerciseId: s.exerciseSelect.value, sets: this.targetSets, reps: this.targetReps, restBetweenSets: this.restBetweenSets });
       this._populatePresets();
       s.presetName.value = '';
-      this._toast('Preset saved!');
+      this._toast('Predvoľba uložená');
     });
 
     s.presetSelect.addEventListener('change', () => {
@@ -652,7 +652,7 @@ class App {
       s.repsDisplay.value    = this.targetReps;
       s.restSetsInput.value  = this.restBetweenSets;
       this._updateTips();          // also refreshes the recap line
-      this._toast(`Loaded: ${name}`);
+      this._toast(`Načítané: ${name}`);
     });
 
     s.btnDeletePreset.addEventListener('click', () => {
@@ -660,7 +660,7 @@ class App {
       if (!name) return;
       this.wm.delete(name);
       this._populatePresets();
-      this._toast('Preset deleted');
+      this._toast('Predvoľba zmazaná');
     });
 
     s.presetPlanSelect.addEventListener('change', () => this._updatePresetPlanDesc());
@@ -673,7 +673,7 @@ class App {
       this.workoutPlan      = template.plan.map(item => ({ ...item }));
       this._activePlanName  = template.name;
       this._renderPlanList();
-      this._toast(`"${template.name}" loaded — ${template.plan.length} exercises`);
+      this._toast(`Načítané: „${template.name}“ — ${template.plan.length} cvikov`);
     });
 
     s.btnAddToPlan.addEventListener('click', () => {
@@ -695,18 +695,18 @@ class App {
         restAfterExercise: num(s.planAddAfter, 0, 300, 60),
       });
       this._renderPlanList();
-      this._toast(`${ex.name} added`);
+      this._toast(`${ex.name} pridaný`);
     });
 
     s.btnSavePlan.addEventListener('click', () => {
       const name = s.planName.value.trim();
       if (!name) { s.planName.focus(); return; }
-      if (this.workoutPlan.length === 0) { this._toast('Plan is empty!'); return; }
+      if (this.workoutPlan.length === 0) { this._toast('Tréning je prázdny'); return; }
       this.wpm.save(name, this.workoutPlan);
       this._activePlanName = name;
       this._populatePlanSelect();
       s.planName.value = '';
-      this._toast('Plan saved!');
+      this._toast('Tréning uložený');
     });
 
     s.btnLoadPlan.addEventListener('click', () => {
@@ -716,12 +716,12 @@ class App {
       // exercise that no longer exists) used to reach _startWorkout intact and
       // build a RepCounter with no exercise, giving an unfinishable set.
       const plan = this.wpm.getSanitised(name);
-      if (!plan.length) { this._toast('That plan has no usable exercises'); return; }
+      if (!plan.length) { this._toast('Tento tréning neobsahuje použiteľné cviky'); return; }
       this.workoutPlan     = plan;
       this._activePlanName = name;
       this._setMode('plan');
       this._renderPlanList();
-      this._toast(`"${name}" loaded — ${plan.length} exercise${plan.length !== 1 ? 's' : ''}`);
+      this._toast(`Načítané: „${name}“ — ${plan.length} cvikov`);
     });
 
     s.btnDeletePlan.addEventListener('click', () => {
@@ -729,7 +729,7 @@ class App {
       if (!name) return;
       this.wpm.delete(name);
       this._populatePlanSelect();
-      this._toast('Plan deleted');
+      this._toast('Tréning zmazaný');
     });
 
     s.btnStartPlan.addEventListener('click', () => { if (this.workoutPlan.length) this._startWorkout(true); });
@@ -762,18 +762,18 @@ class App {
     const w = this.workout;
 
     w.btnBack.addEventListener('click', () => {
-      if (confirm('End workout and return to setup?')) this._goSetup();
+      if (confirm('Ukončiť tréning a vrátiť sa na nastavenia?')) this._goSetup();
     });
 
     w.btnPause.addEventListener('click', () => {
       if (this.isPaused) {
         this.isPaused = false;
-        w.btnPause.textContent = '⏸ Pause';
+        w.btnPause.textContent = '⏸ Pauza';
         this._acquireWakeLock();
         this._loop();
       } else {
         this.isPaused = true;
-        w.btnPause.textContent = '▶ Resume';
+        w.btnPause.textContent = '▶ Pokračovať';
         cancelAnimationFrame(this.animationId);
         this._releaseWakeLock();
       }
@@ -894,7 +894,7 @@ class App {
     const b = this.workout.btnAudio;
     if (!b) return;
     b.textContent = enabled ? '🔔' : '🔕';
-    b.title       = enabled ? 'Mute beep sound' : 'Enable beep sound';
+    b.title       = enabled ? 'Vypnúť pípanie' : 'Zapnúť pípanie';
     b.setAttribute('aria-pressed', String(enabled));
   }
 
@@ -955,7 +955,7 @@ class App {
       this.workoutPlan = this.workoutPlan.filter(
         it => it && EXERCISES.some(e => e.id === it.exerciseId));
       if (!this.workoutPlan.length) {
-        this._toast('Plan has no valid exercises');
+        this._toast('Tréning neobsahuje platné cviky');
         this._showScreen('setup');
         return;
       }
@@ -1001,7 +1001,7 @@ class App {
       if (!this.detector.ready) {
         await this.detector.init(msg => { this.loadingMsg.textContent = msg; });
       }
-      this.loadingMsg.textContent = 'Starting camera…';
+      this.loadingMsg.textContent = 'Spúšťam kameru…';
       this.stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
         audio: false,
@@ -1019,13 +1019,13 @@ class App {
       // err.message for a denied permission is "Permission denied" — true and
       // useless. Say what went wrong and what fixes it.
       const byName = {
-        NotAllowedError:    'Camera access was blocked. Allow the camera for this page in your browser settings, then try again.',
-        NotFoundError:      'No camera found on this device.',
-        NotReadableError:   'The camera is already in use by another app. Close it and try again.',
-        OverconstrainedError: 'This camera cannot provide the requested video format.',
-        SecurityError:      'The browser blocked the camera. A camera only works over https:// or on localhost.',
+        NotAllowedError:    'Prístup ku kamere je zablokovaný. Povoľ kameru pre túto stránku v nastaveniach prehliadača a skús znova.',
+        NotFoundError:      'Na tomto zariadení sa nenašla žiadna kamera.',
+        NotReadableError:   'Kameru už používa iná aplikácia. Zavri ju a skús znova.',
+        OverconstrainedError: 'Táto kamera nevie poskytnúť požadovaný formát videa.',
+        SecurityError:      'Prehliadač zablokoval kameru. Kamera funguje len cez https:// alebo na localhoste.',
       };
-      alert(byName[err.name] || ('Could not start camera: ' + err.message));
+      alert(byName[err.name] || ('Kameru sa nepodarilo spustiť: ' + err.message));
       clearInterval(this._workoutTimerInterval);
       this._showScreen('setup');
       return;
@@ -1036,7 +1036,7 @@ class App {
     this.isRunning   = true;
     this.isPaused    = false;
     this._processing = false;
-    this.workout.btnPause.textContent = '⏸ Pause';
+    this.workout.btnPause.textContent = '⏸ Pauza';
     await this._acquireWakeLock();
     this._loop();
   }
@@ -1116,7 +1116,7 @@ class App {
       console.error('Detection frame failed:', err);
       this._detectFailures = (this._detectFailures || 0) + 1;
       if (this._detectFailures === 5) {
-        this._toast('Camera detection is struggling — use 👆 +1 Rep if it stalls');
+        this._toast('Detekcia má problém — ak sa zasekne, použi 👆 +1 opak.');
       }
     } finally {
       this._processing = false;
@@ -1180,12 +1180,12 @@ class App {
   }
 
   _showRest() {
-    this.rest.setDone.textContent        = `Set ${this.currentSet} of ${this.targetSets} complete! ✓`;
+    this.rest.setDone.textContent        = `Séria ${this.currentSet} z ${this.targetSets} hotová! ✓`;
     const nextSet = this.currentSet + 1;
     const isLast  = nextSet >= this.targetSets;
     this.rest.tip.textContent = isLast
-      ? `Last set coming — ${this.targetReps} reps · Give it everything!`
-      : `Up next: Set ${nextSet} of ${this.targetSets} · ${this.targetReps} reps`;
+      ? `Ide posledná séria — ${this.targetReps} opakovaní · Daj do toho všetko!`
+      : `Nasleduje: séria ${nextSet} z ${this.targetSets} · ${this.targetReps} opakovaní`;
     this.rest.nextExercise.style.display = 'none';
     this._startRest(this.restBetweenSets);
   }
@@ -1196,9 +1196,9 @@ class App {
     const nextEx   = EXERCISES.find(e => e.id === nextItem.exerciseId);
     const duration = this.workoutPlan[this.planIndex].restAfterExercise ?? this.restBetweenExercises;
 
-    this.rest.setDone.textContent   = `Exercise ${this.planIndex + 1} / ${this.workoutPlan.length} complete!`;
-    this.rest.tip.textContent       = 'Prepare for the next exercise!';
-    this.rest.nextExercise.textContent = `Up next: ${nextEx?.name || nextItem.exerciseId}`;
+    this.rest.setDone.textContent   = `Cvik ${this.planIndex + 1} / ${this.workoutPlan.length} hotový!`;
+    this.rest.tip.textContent       = 'Priprav sa na ďalší cvik!';
+    this.rest.nextExercise.textContent = `Nasleduje: ${nextEx?.name || nextItem.exerciseId}`;
     this.rest.nextExercise.style.display = '';
     this._isExerciseTransition = true;
     this._startRest(duration);
@@ -1236,7 +1236,7 @@ class App {
     this.rest.countdown.textContent = big
       ? `${Math.floor(secs / 60)}:${(secs % 60).toString().padStart(2, '0')}`
       : secs;
-    if (this.rest.countdownLabel) this.rest.countdownLabel.textContent = big ? 'min : sec' : 'seconds';
+    if (this.rest.countdownLabel) this.rest.countdownLabel.textContent = big ? 'min : s' : 'sekúnd';
   }
 
   _updateRestRing(remaining, total) {
@@ -1273,7 +1273,7 @@ class App {
       this.isRunning   = true;
       this.isPaused    = false;
       this._processing = false;
-      this.workout.btnPause.textContent = '⏸ Pause';
+      this.workout.btnPause.textContent = '⏸ Pauza';
       this._acquireWakeLock();
       this._loop();
     }
@@ -1301,7 +1301,7 @@ class App {
     this.isRunning   = true;
     this.isPaused    = false;
     this._processing = false;
-    this.workout.btnPause.textContent = '⏸ Pause';
+    this.workout.btnPause.textContent = '⏸ Pauza';
     this._acquireWakeLock();
     this._loop();
   }
@@ -1355,7 +1355,7 @@ class App {
     if (this.isRunningPlan) {
       this.complete.singleStats.style.display = 'none';
       this.complete.planStats.style.display   = '';
-      this.complete.heading.textContent        = 'Plan Complete!';
+      this.complete.heading.textContent        = 'Tréning dokončený!';
 
       this.complete.planSummaryList.innerHTML = '';
       this.planResults.forEach((r, i) => {
@@ -1367,7 +1367,7 @@ class App {
         // FIX: escape exercise name (belt-and-suspenders, comes from config)
         div.innerHTML = `
           <span class="plan-summary-name">${i + 1}. ${escapeHtml(r.exerciseName)}</span>
-          <span class="plan-summary-meta">${r.sets} sets · ${r.totalReps} reps${avgWeight > 0 ? ` · ${avgWeight} kg` : ''}</span>
+          <span class="plan-summary-meta">${r.sets} sérií · ${r.totalReps} opakovaní${avgWeight > 0 ? ` · ${avgWeight} kg` : ''}</span>
         `;
         this.complete.planSummaryList.appendChild(div);
       });
@@ -1377,7 +1377,7 @@ class App {
     } else {
       this.complete.singleStats.style.display = '';
       this.complete.planStats.style.display   = 'none';
-      this.complete.heading.textContent        = 'Workout Complete!';
+      this.complete.heading.textContent        = 'Cvik dokončený!';
       const ex        = EXERCISES.find(e => e.id === this.exerciseId);
       const totalReps = this.currentExerciseSetData.reduce((sum, d) => sum + d.reps, 0);
       const avgWeight = this.currentExerciseSetData.length
@@ -1387,15 +1387,15 @@ class App {
       this.complete.exerciseName.textContent = ex?.name || '';
       const setsDone = this.currentExerciseSetData.length || this.targetSets;
       this.complete.totalSets.textContent    = setsDone === this.targetSets
-        ? `${setsDone} sets`
-        : `${setsDone} of ${this.targetSets} sets`;
-      this.complete.totalReps.textContent    = `${totalReps} reps${avgWeight > 0 ? ` · ${avgWeight} kg avg` : ''}`;
+        ? `${setsDone}`
+        : `${setsDone} z ${this.targetSets}`;
+      this.complete.totalReps.textContent    = `${totalReps}${avgWeight > 0 ? ` · ${avgWeight} kg priemer` : ''}`;
       if (this.complete.totalVolume) this.complete.totalVolume.textContent = totalVolume > 0 ? `${totalVolume.toFixed(1)} kg` : '—';
       if (this.complete.totalTime)   this.complete.totalTime.textContent   = this._fmtTime(totalSecs);
     }
 
     this._refreshStravaButton();
-    this._shareHint('.FIT keeps every set, rep and weight. Garmin Connect → <b>+</b> → '
+    this._shareHint('.FIT zachová každú sériu, opakovanie aj váhu. Garmin Connect → <b>+</b> → '
                   + 'Import Data; Strava → <b>+</b> → Upload Activity.');
     this._showScreen('complete');
   }
@@ -1432,7 +1432,7 @@ class App {
 
   _exportSession(kind) {
     const entry = this._lastSessionEntry;
-    if (!entry) { this._shareHint('Nothing to export yet.', 'fail'); return; }
+    if (!entry) { this._shareHint('Zatiaľ niet čo exportovať.', 'fail'); return; }
     try {
       if (kind === 'fit') {
         // Negated because getTimezoneOffset() reports minutes to ADD to local
@@ -1441,16 +1441,16 @@ class App {
         const bytes = buildStrengthFit(entry, { tzOffsetSec });
         this._download(new Blob([bytes], { type: 'application/octet-stream' }),
                        this._sessionFileName('fit'));
-        this._shareHint('Saved. <b>Garmin Connect</b> → + → Import Data, or '
-                      + '<b>Strava</b> → + → Upload Activity. Sets, reps and weight are all in there.', 'ok');
+        this._shareHint('Uložené. <b>Garmin Connect</b> → + → Import Data, alebo '
+                      + '<b>Strava</b> → + → Upload Activity. Série, opakovania aj váhy sú vnútri.', 'ok');
       } else {
         this._download(new Blob([buildTcx(entry)], { type: 'application/vnd.garmin.tcx+xml' }),
                        this._sessionFileName('tcx'));
-        this._shareHint('Saved as .TCX. Use this only if .FIT is rejected — '
-                      + 'TCX cannot carry per-set reps and weight.', 'ok');
+        this._shareHint('Uložené ako .TCX. Použi to len ak .FIT neprejde — '
+                      + 'TCX neprenesie opakovania a váhy po sériách.', 'ok');
       }
     } catch (err) {
-      this._shareHint('Export failed: ' + escapeHtml(err.message), 'fail');
+      this._shareHint('Export zlyhal: ' + escapeHtml(err.message), 'fail');
     }
   }
 
@@ -1461,7 +1461,7 @@ class App {
     // possibly work is worse than no button.
     if (!this.strava.configured) { btn.style.display = 'none'; return; }
     btn.style.display = '';
-    btn.textContent = this.strava.connected ? '🔶 Send to Strava' : '🔶 Connect Strava';
+    btn.textContent = this.strava.connected ? '🔶 Poslať do Stravy' : '🔶 Pripojiť Stravu';
   }
 
   async _sendToStrava() {
@@ -1471,15 +1471,15 @@ class App {
     if (!this.strava.connected) { this.strava.beginAuth(); return; }
     const original = btn.textContent;
     btn.disabled = true;
-    btn.textContent = 'Uploading…';
+    btn.textContent = 'Nahrávam…';
     try {
       const tzOffsetSec = -new Date(entry.date).getTimezoneOffset() * 60;
       const bytes = buildStrengthFit(entry, { tzOffsetSec });
       await this.strava.uploadFit(bytes, this._sessionFileName('fit'));
-      this._shareHint('Sent to Strava. It takes a few seconds to appear in your feed.', 'ok');
+      this._shareHint('Odoslané do Stravy. Vo feede sa objaví o pár sekúnd.', 'ok');
     } catch (err) {
-      this._shareHint('Strava upload failed: ' + escapeHtml(err.message)
-                    + ' — the .FIT download still works.', 'fail');
+      this._shareHint('Nahrávanie do Stravy zlyhalo: ' + escapeHtml(err.message)
+                    + ' — stiahnutie .FIT stále funguje.', 'fail');
     } finally {
       btn.disabled = false;
       btn.textContent = original;
@@ -1525,14 +1525,14 @@ class App {
 
   _exportHistory() {
     const data = this.history.list();
-    if (!data.length) { this._toast('No history to export'); return; }
+    if (!data.length) { this._toast('Žiadna história na export'); return; }
     // Routed through _download(): the anchor has to be in the document and the
     // object URL must outlive the click, which the old inline version got wrong
     // in exactly the way _download() was written to avoid.
     this._download(
       new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }),
       `workout-history-${new Date().toISOString().slice(0, 10)}.json`);
-    this._toast(`Exported ${data.length} workout${data.length !== 1 ? 's' : ''}`);
+    this._toast(`Exportovaných ${data.length} tréningov`);
   }
 
   _renderHistoryList() {
@@ -1541,7 +1541,7 @@ class App {
     container.innerHTML = '';
 
     if (!entries.length) {
-      container.innerHTML = '<p class="history-empty">No workouts recorded yet.<br>Complete a workout to see it here.</p>';
+      container.innerHTML = '<p class="history-empty">Zatiaľ žiadny zaznamenaný tréning.<br>Dokonči tréning a objaví sa tu.</p>';
       return;
     }
 
@@ -1553,7 +1553,7 @@ class App {
       // key — used to throw here and blank the entire history screen.
       const exercises = Array.isArray(entry.exercises) ? entry.exercises : [];
       // FIX: escape plan name and exercise names — user-controlled strings
-      const title   = escapeHtml(entry.planName || exercises[0]?.exerciseName || 'Workout');
+      const title   = escapeHtml(entry.planName || exercises[0]?.exerciseName || 'Tréning');
 
       const exerciseRows = exercises.map(ex => {
         const totalReps = ex.totalReps ?? (ex.setData?.reduce((s, d) => s + d.reps, 0) ?? 0);
@@ -1568,10 +1568,10 @@ class App {
           <div class="history-exercise-row">
             <div>
               <div class="history-exercise-name">${escapeHtml(ex.exerciseName)}</div>
-              <div class="history-exercise-detail">${ex.sets} sets${rpeStr}</div>
+              <div class="history-exercise-detail">${ex.sets} sérií${rpeStr}</div>
             </div>
             <span class="history-exercise-stats">
-              ${totalReps} reps${avgWeight > 0 ? `<br>${avgWeight.toFixed(1)}&nbsp;kg` : ''}
+              ${totalReps} opak.${avgWeight > 0 ? `<br>${avgWeight.toFixed(1)}&nbsp;kg` : ''}
             </span>
           </div>`;
       }).join('');
@@ -1583,17 +1583,17 @@ class App {
           <span class="history-card-title">${title}</span>
           <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
             <span class="history-card-date">${escapeHtml(dateStr)} · ${escapeHtml(timeStr)}</span>
-            <button class="btn-icon danger history-card-delete" title="Delete this entry" aria-label="Delete the ${title} workout from ${escapeHtml(dateStr)}">✕</button>
+            <button class="btn-icon danger history-card-delete" title="Zmazať tento záznam" aria-label="Zmazať tréning ${title} z ${escapeHtml(dateStr)}">✕</button>
           </div>
         </div>
         <div class="history-card-meta">
           <span>⏱ ${this._fmtTime(entry.totalDuration || 0)}</span>
-          <span>💪 ${exercises.length} exercise${exercises.length !== 1 ? 's' : ''}</span>
+          <span>💪 ${exercises.length} ${exercises.length === 1 ? 'cvik' : exercises.length < 5 ? 'cviky' : 'cvikov'}</span>
         </div>
         <div class="history-exercise-list">${exerciseRows}</div>
       `;
       card.querySelector('.history-card-delete').addEventListener('click', () => {
-        if (!confirm('Delete this workout entry?')) return;
+        if (!confirm('Zmazať tento záznam tréningu?')) return;
         this.history.delete(entry.id);
         this._renderHistoryList();
       });
@@ -1612,13 +1612,13 @@ class App {
 
     // Subtitle: "Set 1 of 3 · 12 reps" — visible without looking away from camera
     if (this.workout.subtitle) {
-      this.workout.subtitle.textContent = `Set ${this.currentSet} of ${this.targetSets} · ${this.targetReps} reps`;
+      this.workout.subtitle.textContent = `Séria ${this.currentSet} z ${this.targetSets} · ${this.targetReps} opakovaní`;
     }
 
     // "Next Set" → "Finish ▶" on the last set so users know it leads to completion
     if (this.workout.btnNext) {
       const isLast = this.currentSet >= this.targetSets;
-      this.workout.btnNext.textContent = isLast ? 'Finish ▶' : 'Next Set ▶';
+      this.workout.btnNext.textContent = isLast ? 'Dokončiť ▶' : 'Ďalšia séria ▶';
     }
 
     if (this.workout.cameraHint) this.workout.cameraHint.textContent = ex?.cameraHint || '';
@@ -1633,8 +1633,8 @@ class App {
           ? prev.setData.reduce((s, d) => s + (d.weight || 0), 0) / prev.setData.length
           : 0;
         hint.textContent = avgWeight > 0
-          ? `↗ Last session: ${totalReps} reps @ ${avgWeight.toFixed(1)} kg avg`
-          : `↗ Last session: ${totalReps} reps`;
+          ? `↗ Naposledy: ${totalReps} opakovaní @ ${avgWeight.toFixed(1)} kg priemer`
+          : `↗ Naposledy: ${totalReps} opakovaní`;
         hint.style.display = '';
       } else {
         hint.textContent = '';
@@ -1649,7 +1649,7 @@ class App {
       reps: 0, angle: 0, quality: 'none',
       leftAngle: null, rightAngle: null, activeSide: null, imbalance: null,
       progress: 0, cycle: 0, phase: 'lifting',
-      coach: `Get set — ${ex?.cues?.concentric || 'start when ready'}`, coachTone: 'neutral',
+      coach: `Priprav sa — ${ex?.cues?.concentric || 'začni, keď budeš pripravený'}`, coachTone: 'neutral',
       leftRom: null, rightRom: null,
     });
     if (this.workout.setTimer) this.workout.setTimer.textContent = '00:00';
@@ -1723,7 +1723,7 @@ class App {
       w.formGaugeFill.style.backgroundColor = cycleColor;
     }
     if (w.formPhase) {
-      w.formPhase.textContent = r.phase === 'returning' ? 'Return' : 'Lift';
+      w.formPhase.textContent = r.phase === 'returning' ? 'Návrat' : 'Zdvih';
     }
 
     // A rep verdict is produced on exactly ONE frame. Rendered naively it shows
@@ -1775,11 +1775,11 @@ class App {
     const badge = this.workout.qualityBadge;
     if (!badge) return;
     const map = {
-      good:   { text: '● Good signal',  cls: 'good' },
-      fair:   { text: '● Fair signal',  cls: 'fair' },
-      poor:   { text: '⚠ Poor signal',  cls: 'poor' },
-      none:   { text: '✕ No signal',    cls: 'none' },
-      manual: { text: '✋ Manual mode',  cls: 'none' },
+      good:   { text: '● Dobrý signál',  cls: 'good' },
+      fair:   { text: '● Slabší signál',  cls: 'fair' },
+      poor:   { text: '⚠ Zlý signál',     cls: 'poor' },
+      none:   { text: '✕ Bez signálu',    cls: 'none' },
+      manual: { text: '✋ Ručný režim',   cls: 'none' },
     };
     const info = map[quality] || map.none;
     badge.textContent = info.text;
@@ -1802,7 +1802,7 @@ class App {
 
     if (w.imbalanceWarning) {
       if (imbalance) {
-        w.imbalanceWarning.textContent = `⚠ ${imbalance === 'left' ? 'Left' : 'Right'} side lagging — check form`;
+        w.imbalanceWarning.textContent = `⚠ ${imbalance === 'left' ? 'Ľavá' : 'Pravá'} strana zaostáva — skontroluj techniku`;
         w.imbalanceWarning.classList.add('active');
       } else {
         w.imbalanceWarning.classList.remove('active');

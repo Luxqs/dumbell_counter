@@ -98,7 +98,7 @@ class PoseDetector {
   }
 
   async init(onProgress) {
-    onProgress?.('Loading pose model…');
+    onProgress?.('Načítavam model pohybu…');
     this.detector = await poseDetection.createDetector(
       poseDetection.SupportedModels.MoveNet,
       {
@@ -108,7 +108,7 @@ class PoseDetector {
       }
     );
     this.ready = true;
-    onProgress?.('Model ready');
+    onProgress?.('Model pripravený');
   }
 
   async detect(video) {
@@ -270,7 +270,7 @@ class RepCounter {
     return this._payload({
       counted:   true,
       quality:   'manual',
-      coach:     'Rep counted by hand',
+      coach:     'Opakovanie pripočítané ručne',
       coachTone: 'neutral',
     });
   }
@@ -278,7 +278,7 @@ class RepCounter {
   // Undo last rep — corrects miscounts; never goes below 0
   undoRep() {
     if (this.reps <= 0) {
-      return this._payload({ counted: false, quality: 'manual', coach: 'No reps to remove', coachTone: 'neutral' });
+      return this._payload({ counted: false, quality: 'manual', coach: 'Niet čo odobrať', coachTone: 'neutral' });
     }
     this.reps--;
     // Drop the matching ROM samples so the imbalance warning stays honest.
@@ -289,7 +289,7 @@ class RepCounter {
     return this._payload({
       counted:   false,
       quality:   'manual',
-      coach:     'Rep removed',
+      coach:     'Opakovanie odobraté',
       coachTone: 'neutral',
     });
   }
@@ -436,7 +436,7 @@ class RepCounter {
   }
 
   update(pose, detector) {
-    if (!this.exercise) return this._payload({ coach: 'Unknown exercise — use the tap counter' });
+    if (!this.exercise) return this._payload({ coach: 'Neznámy cvik — použi ručné počítadlo' });
 
     const L = this._tickSide(this._left,  pose, detector, 'left');
     const R = this._tickSide(this._right, pose, detector, 'right');
@@ -446,7 +446,7 @@ class RepCounter {
       this._activeProgress = 0;
       return this._payload({
         quality:   'none',
-        coach:     'Can\'t see the joints — step back so your whole body is in frame',
+        coach:     'Nevidím kĺby — odstúp, nech si celý v zábere',
         coachTone: 'bad',
       });
     }
@@ -546,7 +546,7 @@ class RepCounter {
     const countP = this._countProgress();
 
     if (quality === 'poor') {
-      return { coach: 'Weak tracking — improve the light or move into frame', coachTone: 'bad' };
+      return { coach: 'Slabé sledovanie — pridaj svetlo alebo sa posuň do záberu', coachTone: 'bad' };
     }
 
     // Credited, but NOT yet judged. At this instant the user has only just
@@ -555,20 +555,20 @@ class RepCounter {
     // shallow. Tempo is already known, so that one can be said immediately.
     if (counted) {
       if (this._lastRepTooFast) {
-        return { coach: `Rep ${this.reps} — too fast, control the weight`, coachTone: 'warn' };
+        return { coach: `Opakovanie ${this.reps} — príliš rýchlo, kontroluj váhu`, coachTone: 'warn' };
       }
-      return { coach: `Rep ${this.reps} ✓`, coachTone: 'good' };
+      return { coach: `Opakovanie ${this.reps} ✓`, coachTone: 'good' };
     }
 
     // Cycle closed — the peak actually reached is now known, so this is where
     // the range-of-motion verdict belongs.
     if (formComplete) {
       if (this._lastRepRom >= SHALLOW_REP_PROGRESS) {
-        return { coach: `Rep ${this.reps} — full range 💪`, coachTone: 'good' };
+        return { coach: `Opakovanie ${this.reps} — plný rozsah 💪`, coachTone: 'good' };
       }
       const pct = Math.round(this._lastRepRom * 100);
       return {
-        coach:     `Rep ${this.reps} — only ${pct}% range · ${cues.concentric || 'go further'}`,
+        coach:     `Opakovanie ${this.reps} — len ${pct} % rozsahu · ${cues.concentric || 'choď ďalej'}`,
         coachTone: 'warn',
       };
     }
@@ -576,27 +576,27 @@ class RepCounter {
     // Lifting phase: not yet armed enough to score
     if (this._armed) {
       if (act.rawProgress >= SHALLOW_REP_PROGRESS) {
-        return { coach: 'Full range — now return under control', coachTone: 'good' };
+        return { coach: 'Plný rozsah — teraz sa vráť kontrolovane', coachTone: 'good' };
       }
       if (act.rawProgress >= countP) {
         // Past the counting line but short of the ideal — this is exactly the
         // half-rep the user wants flagged.
         const gap = Math.round(Math.abs(cfg.idealPeak - act.raw));
-        return { coach: `${cues.concentric || 'Go further'} — ${gap}° more`, coachTone: 'warn' };
+        return { coach: `${cues.concentric || 'Choď ďalej'} — ešte ${gap}°`, coachTone: 'warn' };
       }
       if (act.rawProgress > 0.08) {
-        return { coach: cues.concentric || 'Keep going', coachTone: 'neutral' };
+        return { coach: cues.concentric || 'Pokračuj', coachTone: 'neutral' };
       }
-      return { coach: 'Ready — start the rep', coachTone: 'neutral' };
+      return { coach: 'Pripravené — začni opakovanie', coachTone: 'neutral' };
     }
 
     // Returning phase: the rep is credited but the cycle isn't closed yet.
     // Until they get back past restThreshold the next rep will NOT count, so
     // say so plainly rather than letting them wonder why nothing moves.
     if (act.progress > 0.35) {
-      return { coach: cues.eccentric || 'Return to the start', coachTone: 'warn' };
+      return { coach: cues.eccentric || 'Vráť sa do východiskovej polohy', coachTone: 'warn' };
     }
-    return { coach: `Almost — ${cues.eccentric || 'return fully'}`, coachTone: 'neutral' };
+    return { coach: `Skoro — ${cues.eccentric || 'vráť sa úplne'}`, coachTone: 'neutral' };
   }
 }
 

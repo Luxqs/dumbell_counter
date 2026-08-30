@@ -86,7 +86,7 @@ await t('preset + plan selects are populated on first run (regression)',()=>{
   assert.ok($('plan-select').options.length>=1,'plan select empty');
   assert.ok($('preset-plan-select').options.length>1,'template list empty');
   assert.strictEqual($('btn-delete-preset').disabled,true,'delete-preset enabled with nothing selected');
-  assert.ok($('plan-list').textContent.includes('Nothing here yet'),'empty-plan message missing');
+  assert.ok($('plan-list').textContent.includes('Zatiaľ prázdne'),'empty-plan message missing');
   assert.strictEqual($('btn-start-plan').disabled,true);
 });
 await t('exercise select lists every configured exercise',()=>{
@@ -123,9 +123,9 @@ await t('the Start button is explained in plain language underneath it',()=>{
   $('reps-display').value='10';$('reps-display').dispatchEvent(new window.Event('change'));
   $('rest-sets-input').value='45';$('rest-sets-input').dispatchEvent(new window.Event('change'));
   const txt=$('single-summary').textContent;
-  assert.ok(/4 × 10 reps of Bicep Curl/.test(txt),txt);
-  assert.ok(/45s rest between sets/.test(txt),txt);
-  assert.ok(/about \d+ min/.test(txt),txt);
+  assert.ok(/4 × 10 opakovaní cviku Bicep Curl/.test(txt),txt);
+  assert.ok(/pauza 45 s medzi sériami/.test(txt),txt);
+  assert.ok(/asi \d+ min/.test(txt),txt);
 });
 await t('the setup screen shows where to put the camera before you start',()=>{
   assert.ok($('setup-camera-hint').textContent.length>5,'camera placement hint missing');
@@ -162,14 +162,14 @@ await t('template names are readable and the description sits below',()=>{
   $('preset-plan-select').value='ppl-push';
   $('preset-plan-select').dispatchEvent(new window.Event('change'));
   const d=$('preset-plan-desc').textContent;
-  assert.ok(/exercises/.test(d)&&/sets/.test(d),'description not shown: "'+d+'"');
+  assert.ok(/cvikov/.test(d)&&/sérií/.test(d),'description not shown: "'+d+'"');
 });
 await t('plan rows start collapsed and open on tap',()=>{
   const head=$('plan-list').querySelector('.plan-item-head');
   const panel=$('plan-list').querySelector('.plan-item-edit');
   assert.strictEqual(panel.hidden,true,'plan rows render expanded');
   assert.strictEqual(head.getAttribute('aria-expanded'),'false');
-  assert.ok(/\d+ sets × \d+ reps/.test(head.textContent),'no one-line recap: '+head.textContent);
+  assert.ok(/\d+ × \d+ · pauza \d+ s/.test(head.textContent),'no one-line recap: '+head.textContent);
   head.click();
   assert.strictEqual(panel.hidden,false);
   assert.strictEqual(head.getAttribute('aria-expanded'),'true');
@@ -182,7 +182,7 @@ await t('editing a field updates that row\'s recap without collapsing it',()=>{
   const inp=$('plan-list').querySelector('[data-field="reps"]');
   inp.value='7'; inp.dispatchEvent(new window.Event('change'));
   assert.strictEqual(app.workoutPlan[0].reps,7);
-  assert.ok(/× 7 reps/.test(head.textContent),head.textContent);
+  assert.ok(/× 7 · pauza/.test(head.textContent),head.textContent);
   assert.strictEqual($('plan-list').querySelector('.plan-item-edit').hidden,false,'row collapsed mid-edit');
 });
 await t('reorder + remove keep the model and the DOM in step',()=>{
@@ -225,8 +225,8 @@ await t('plan builder clamps out-of-range entries',()=>{
 });
 await t('the plan states its own total before you commit',()=>{
   const txt=$('plan-summary-line').textContent;
-  assert.ok(/2 exercises/.test(txt),txt);
-  assert.ok(/sets/.test(txt)&&/about \d+ min/.test(txt),txt);
+  assert.ok(/2 cviky/.test(txt),txt);
+  assert.ok(/sérií/.test(txt)&&/asi \d+ min/.test(txt),txt);
 });
 await t('a saved plan holding a dead exercise is sanitised on load',()=>{
   app.wpm.save('legacy',[{exerciseId:'jazzercise',sets:3,reps:10},{exerciseId:'bicep-curl',sets:2,reps:8,restBetweenSets:0,restAfterExercise:0}]);
@@ -265,7 +265,7 @@ await t('set 1: two camera reps trigger the RPE prompt',async()=>{
   await sleep(500);
   assert.strictEqual(app.counter.reps,2,'reps='+app.counter.reps);
   assert.ok($('rpe-overlay').classList.contains('active'),'RPE overlay not shown');
-  assert.strictEqual($('rpe-overlay').querySelector('.rpe-title').textContent,'Set 1 of 2 — How hard was that?');
+  assert.strictEqual($('rpe-overlay').querySelector('.rpe-title').textContent,'Séria 1 z 2 — Aké to bolo ťažké?');
 });
 await t('RPE choice is recorded and rest starts',async()=>{
   $('rpe-overlay').querySelector('[data-rpe="8"]').click();
@@ -436,10 +436,10 @@ await t('every form control on the setup screen has an accessible name',()=>{
 await t('long rests read as minutes, not a three-digit number',()=>{
   app.restRemaining=180;app._renderCountdown();
   assert.strictEqual($('rest-countdown').textContent,'3:00');
-  assert.strictEqual($('rest-countdown-label').textContent,'min : sec');
+  assert.strictEqual($('rest-countdown-label').textContent,'min : s');
   app.restRemaining=45;app._renderCountdown();
   assert.strictEqual($('rest-countdown').textContent,'45');
-  assert.strictEqual($('rest-countdown-label').textContent,'seconds');
+  assert.strictEqual($('rest-countdown-label').textContent,'sekúnd');
 });
 
 console.log('\n▸ teardown');
@@ -456,7 +456,7 @@ await t('switching profile isolates presets, plans and history',()=>{
   $('btn-create-profile').click();
   assert.strictEqual(app.history.list().length,0);
   assert.strictEqual(app.workoutPlan.length,0);
-  assert.ok($('plan-list').textContent.includes('Nothing here yet'));
+  assert.ok($('plan-list').textContent.includes('Zatiaľ prázdne'));
 });
 
 console.log(`\n${pass} passed, ${fail} failed`);

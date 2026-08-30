@@ -77,7 +77,7 @@ t('undo on an empty counter does not eat ROM history',()=>{
   const r=rc.undoRep();
   assert.strictEqual(rc.reps,0);
   assert.strictEqual(rc._romLeft.length,1,'ROM sample was wrongly discarded');
-  assert.strictEqual(r.coach,'No reps to remove');
+  assert.strictEqual(r.coach,'Niet čo odobrať');
 });
 t('manual rep then undo returns to 0',()=>{
   const rc=new ctx.RepCounter('bicep-curl');rc.manualRep();rc.manualRep();rc.undoRep();rc.undoRep();rc.undoRep();
@@ -86,7 +86,7 @@ t('manual rep then undo returns to 0',()=>{
 t('unknown exercise degrades instead of throwing',()=>{
   const rc=new ctx.RepCounter('does-not-exist');
   const r=rc.update({},det);
-  assert.ok(r.coach.includes('Unknown exercise'));
+  assert.ok(r.coach.includes('Neznámy cvik'));
   assert.strictEqual(rc.manualRep().reps,1);
 });
 
