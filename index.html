@@ -1,26 +1,50 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sk">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0f14" />
+  <meta name="description" content="Počítadlo opakovaní a sérií s činkami cez kameru. Spočíta opakovania, odmeria pauzy a pošle tréning do Garminu alebo Stravy." />
   <title>Dumbbell Counter</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#127947;</text></svg>" />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
 
   <!-- ════════════════════════════════════════════════════════════════════════
-       PROFILE MODAL — shown on first load or when switching profiles
+       PROFILE MODAL
   ═══════════════════════════════════════════════════════════════════════════ -->
-  <div id="profile-modal" class="modal-overlay" aria-modal="true" role="dialog">
+  <div id="profile-modal" class="modal-overlay" aria-modal="true" role="dialog"
+       aria-labelledby="profile-modal-title" aria-describedby="profile-modal-sub">
     <div class="modal-box">
-      <div class="modal-icon">👤</div>
-      <h2 class="modal-title">Who's working out?</h2>
-      <p class="modal-sub">Profiles keep your plans &amp; presets separate. Data is stored locally in your browser — it survives cookie deletion.</p>
+      <button class="modal-close" id="btn-profile-modal-close" aria-label="Zavrieť">&#10005;</button>
+      <div class="modal-icon" aria-hidden="true">&#128100;</div>
+      <h2 class="modal-title" id="profile-modal-title">Kto dnes cvičí?</h2>
+      <p class="modal-sub" id="profile-modal-sub">Profil oddelí tvoje plány, predvoľby a históriu od ostatných. Dáta zostávajú v tvojom prehliadači.</p>
       <div id="profile-list" class="profile-list"></div>
       <div class="profile-new-row">
-        <input type="text" id="profile-name-input" placeholder="New profile name…" maxlength="30" />
-        <button class="btn btn-primary" id="btn-create-profile" style="width:auto; padding:12px 18px;">Create</button>
+        <input type="text" id="profile-name-input" aria-label="Meno nového profilu" placeholder="Meno nového profilu&hellip;" maxlength="30" />
+        <button class="btn btn-primary btn-inline" id="btn-create-profile">Vytvoriť</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════════
+       RPE OVERLAY — shown after each set completes
+  ═══════════════════════════════════════════════════════════════════════════ -->
+  <div id="rpe-overlay" class="rpe-overlay" aria-modal="true" role="dialog"
+       aria-labelledby="rpe-title" aria-describedby="rpe-sub">
+    <div class="rpe-box">
+      <div class="rpe-title" id="rpe-title">Séria hotová &mdash; Aké to bolo ťažké?</div>
+      <div class="rpe-sub" id="rpe-sub">Vnímaná náročnosť (6 = veľmi ľahké &middot; 10 = absolútne maximum)</div>
+      <div class="rpe-grid">
+        <button class="rpe-btn rpe-6"  data-rpe="6" ><span class="rpe-num">6</span> <span class="rpe-tag">Ľahké</span></button>
+        <button class="rpe-btn rpe-7"  data-rpe="7" ><span class="rpe-num">7</span> <span class="rpe-tag">Stredné</span></button>
+        <button class="rpe-btn rpe-8"  data-rpe="8" ><span class="rpe-num">8</span> <span class="rpe-tag">Ťažké</span></button>
+        <button class="rpe-btn rpe-9"  data-rpe="9" ><span class="rpe-num">9</span> <span class="rpe-tag">Veľmi</span></button>
+        <button class="rpe-btn rpe-10" data-rpe="10"><span class="rpe-num">10</span><span class="rpe-tag">Max</span></button>
+      </div>
+      <button class="rpe-skip">Preskočiť</button>
     </div>
   </div>
 
@@ -32,126 +56,164 @@
     <div class="screen-inner">
 
       <div class="app-header">
-        <div class="logo">🏋️</div>
+        <div class="logo" aria-hidden="true">&#127947;</div>
         <h1>Dumbbell Counter</h1>
-        <p>Camera-powered rep &amp; set tracking</p>
+        <p>Kamera počíta opakovania &mdash; ty len dvíhaj</p>
         <div class="profile-bar">
           <span id="profile-indicator" class="profile-indicator"></span>
-          <button class="btn-link" id="btn-switch-profile">Switch profile</button>
+          <button class="btn-link" id="btn-switch-profile">Zmeniť profil</button>
+          <span class="profile-bar-sep" aria-hidden="true">&middot;</span>
+          <button class="btn-link" id="btn-history">&#128202; História</button>
         </div>
       </div>
 
-      <div class="setup-cols">
+      <!-- ── Mode switch: the first decision a new user has to make ────────── -->
+      <div class="mode-switch" role="tablist" aria-label="Čo dnes trénuješ?">
+        <button class="mode-tab active" id="tab-single" role="tab"
+                aria-selected="true" aria-controls="panel-single">
+          <span class="mode-tab-icon" aria-hidden="true">&#127947;</span>
+          <span class="mode-tab-name">Jeden cvik</span>
+          <span class="mode-tab-desc">Len tento cvik, pár sérií</span>
+        </button>
+        <button class="mode-tab" id="tab-plan" role="tab"
+                aria-selected="false" aria-controls="panel-plan" tabindex="-1">
+          <span class="mode-tab-icon" aria-hidden="true">&#128203;</span>
+          <span class="mode-tab-name">Celý tréning</span>
+          <span class="mode-tab-desc">Viac cvikov za sebou</span>
+        </button>
+      </div>
 
-        <!-- ── Left column ────────────────────────────────────────────────── -->
-        <div class="setup-col">
 
-          <!-- Exercise selection -->
-          <div class="card">
-            <h3 class="card-title">Exercise</h3>
-            <select id="exercise-select"></select>
-            <div class="tips-box" id="exercise-tips"></div>
-          </div>
+      <!-- ══════════════ PANEL A — ONE EXERCISE ══════════════════════════════ -->
+      <div id="panel-single" class="setup-panel" role="tabpanel" aria-labelledby="tab-single" tabindex="0">
 
-          <!-- Sets & Reps -->
-          <div class="card">
-            <h3 class="card-title">Workout Goal</h3>
-            <div class="steppers">
-              <div class="stepper">
-                <label>Sets</label>
-                <div class="stepper-row">
-                  <button class="btn-stepper" id="btn-sets-minus">−</button>
-                  <input type="number" class="stepper-value" id="sets-display" value="3" min="1" max="20" />
-                  <button class="btn-stepper" id="btn-sets-plus">+</button>
-                </div>
+        <div class="card">
+          <h2 class="card-title"><span class="step-num" aria-hidden="true">1</span> Vyber cvik</h2>
+          <select id="exercise-select" aria-label="Cvik"></select>
+          <div class="tips-box" id="exercise-tips"></div>
+          <div class="camera-hint camera-hint-setup" id="setup-camera-hint"></div>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title"><span class="step-num" aria-hidden="true">2</span> Koľko toho bude?</h2>
+          <p class="card-sub"><b>Séria</b> je jeden blok opakovaní bez prestávky. Odcvičíš sériu, oddýchneš si, opakuješ.</p>
+          <div class="steppers">
+            <div class="stepper">
+              <label for="sets-display">Série</label>
+              <div class="stepper-row">
+                <button class="btn-stepper" id="btn-sets-minus" aria-label="O jednu sériu menej">&minus;</button>
+                <input type="number" class="stepper-value" id="sets-display" value="3" min="1" max="20" />
+                <button class="btn-stepper" id="btn-sets-plus" aria-label="O jednu sériu viac">+</button>
               </div>
-              <div class="stepper">
-                <label>Reps</label>
-                <div class="stepper-row">
-                  <button class="btn-stepper" id="btn-reps-minus">−</button>
-                  <input type="number" class="stepper-value" id="reps-display" value="12" min="1" max="50" />
-                  <button class="btn-stepper" id="btn-reps-plus">+</button>
-                </div>
+              <div class="stepper-hint">blokov opakovaní</div>
+            </div>
+            <div class="stepper">
+              <label for="reps-display">Opakovaní v sérii</label>
+              <div class="stepper-row">
+                <button class="btn-stepper" id="btn-reps-minus" aria-label="O jedno opakovanie menej">&minus;</button>
+                <input type="number" class="stepper-value" id="reps-display" value="12" min="1" max="50" />
+                <button class="btn-stepper" id="btn-reps-plus" aria-label="O jedno opakovanie viac">+</button>
               </div>
+              <div class="stepper-hint">zdvihov v jednom bloku</div>
             </div>
           </div>
 
-          <!-- Rest Times -->
-          <div class="card">
-            <h3 class="card-title">Rest Times</h3>
-            <div class="steppers">
-              <div class="stepper">
-                <label>Between Sets</label>
-                <div class="stepper-row">
-                  <button class="btn-stepper" id="btn-rest-sets-minus">−</button>
-                  <input type="number" class="rest-number-input" id="rest-sets-input" min="0" max="300" value="30" />
-                  <button class="btn-stepper" id="btn-rest-sets-plus">+</button>
-                </div>
-                <div class="rest-time-hint">0 – 300 s (max 5 min)</div>
-              </div>
-              <div class="stepper">
-                <label>Between Exercises</label>
-                <div class="stepper-row">
-                  <button class="btn-stepper" id="btn-rest-exercises-minus">−</button>
-                  <input type="number" class="rest-number-input" id="rest-exercises-input" min="0" max="300" value="60" />
-                  <button class="btn-stepper" id="btn-rest-exercises-plus">+</button>
-                </div>
-                <div class="rest-time-hint">0 – 300 s (max 5 min)</div>
-              </div>
+          <div class="rest-field">
+            <label for="rest-sets-input">Pauza medzi sériami</label>
+            <div class="stepper-row stepper-row-inline">
+              <button class="btn-stepper" id="btn-rest-sets-minus" aria-label="O 10 sekúnd kratšia pauza">&minus;</button>
+              <input type="number" class="rest-number-input" id="rest-sets-input" min="0" max="300" value="30" inputmode="numeric" />
+              <span class="rest-unit">s</span>
+              <button class="btn-stepper" id="btn-rest-sets-plus" aria-label="O 10 sekúnd dlhšia pauza">+</button>
             </div>
+            <div class="rest-time-hint">Appka ti ju odpočíta &middot; max 5 min</div>
           </div>
+        </div>
 
-          <button class="btn btn-primary" id="btn-start">▶ Start Single Exercise</button>
+        <button class="btn btn-primary btn-go" id="btn-start">&#9654; Spustiť cvik</button>
+        <p class="go-summary" id="single-summary" role="status" aria-live="polite"></p>
 
-        </div><!-- /setup-col left -->
-
-        <!-- ── Right column ───────────────────────────────────────────────── -->
-        <div class="setup-col">
-
-          <!-- Presets -->
-          <div class="card">
-            <h3 class="card-title">Presets</h3>
-            <div style="margin-bottom:10px;">
-              <select id="preset-select" style="margin-bottom:8px;"></select>
-              <button class="btn btn-danger" id="btn-delete-preset" style="width:100%;">Delete selected preset</button>
-            </div>
+        <details class="card card-collapsible">
+          <summary><span class="summary-label">Uložiť toto nastavenie ako predvoľbu</span></summary>
+          <div class="collapsible-body">
+            <p class="card-sub">Predvoľba si zapamätá cvik aj s počtom sérií, opakovaní a pauzou &mdash; nabudúce ju načítaš jedným ťuknutím.</p>
             <div class="preset-row">
-              <input type="text" id="preset-name" placeholder="Name this preset…" maxlength="40" />
-              <button class="btn btn-accent" id="btn-save-preset">💾 Save</button>
+              <input type="text" id="preset-name" aria-label="Názov predvoľby" placeholder="Pomenuj ju, napr. &quot;Biceps ťažko&quot;&hellip;" maxlength="40" />
+              <button class="btn btn-accent btn-inline" id="btn-save-preset">Uložiť</button>
+            </div>
+            <div class="field-block">
+              <label for="preset-select">Načítať uloženú predvoľbu</label>
+              <select id="preset-select"></select>
+            </div>
+            <button class="btn btn-danger btn-sm btn-block" id="btn-delete-preset">Zmazať vybranú predvoľbu</button>
+          </div>
+        </details>
+
+      </div><!-- /panel-single -->
+
+
+      <!-- ══════════════ PANEL B — FULL WORKOUT ══════════════════════════════ -->
+      <div id="panel-plan" class="setup-panel" role="tabpanel" aria-labelledby="tab-plan" tabindex="0" hidden>
+
+        <div class="card">
+          <h2 class="card-title"><span class="step-num" aria-hidden="true">1</span> Začni šablónou
+            <span class="badge-optional">nepovinné</span></h2>
+          <p class="card-sub">Hotové tréningy. Načítaj si jeden a uprav si v ňom čokoľvek.</p>
+          <div class="plan-templates-row">
+            <select id="preset-plan-select" aria-label="Šablóna tréningu"></select>
+            <button class="btn btn-secondary" id="btn-load-preset-plan">Načítať</button>
+          </div>
+          <p class="preset-plan-desc" id="preset-plan-desc" role="status" aria-live="polite"></p>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title"><span class="step-num" aria-hidden="true">2</span> Tvoj tréning</h2>
+          <div id="plan-list" class="plan-list"></div>
+          <p class="plan-summary-line" id="plan-summary-line" role="status" aria-live="polite"></p>
+
+          <div class="plan-add">
+            <div class="plan-add-title">Pridať cvik</div>
+            <select id="plan-add-exercise" aria-label="Cvik na pridanie"></select>
+            <div class="plan-add-fields">
+              <label class="plan-field-label">Série
+                <input type="number" id="plan-add-sets"  class="plan-field-input" min="1" max="20"  value="3"  inputmode="numeric" />
+              </label>
+              <label class="plan-field-label">Opak.
+                <input type="number" id="plan-add-reps"  class="plan-field-input" min="1" max="50"  value="12" inputmode="numeric" />
+              </label>
+              <label class="plan-field-label">Pauza&nbsp;(s)
+                <input type="number" id="plan-add-rest"  class="plan-field-input" min="0" max="300" value="60" inputmode="numeric" />
+              </label>
+              <label class="plan-field-label">Po cviku&nbsp;(s)
+                <input type="number" id="plan-add-after" class="plan-field-input" min="0" max="300" value="90" inputmode="numeric" />
+              </label>
+            </div>
+            <p class="plan-add-legend"><b>Pauza</b> = prestávka medzi sériami tohto cviku &middot; <b>Po cviku</b> = prestávka pred ďalším cvikom</p>
+            <button class="btn btn-accent btn-block" id="btn-add-to-plan">+ Pridať do tréningu</button>
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-go" id="btn-start-plan" disabled>&#9654; Spustiť tréning</button>
+
+        <details class="card card-collapsible">
+          <summary><span class="summary-label">Uložiť alebo načítať tréning</span></summary>
+          <div class="collapsible-body">
+            <div class="preset-row">
+              <input type="text" id="plan-name" aria-label="Názov tréningu" placeholder="Pomenuj ho, napr. &quot;Pondelok tlaky&quot;&hellip;" maxlength="40" />
+              <button class="btn btn-accent btn-inline" id="btn-save-plan" aria-label="Uložiť tréning">Uložiť</button>
+            </div>
+            <div class="field-block">
+              <label for="plan-select">Moje uložené tréningy</label>
+              <select id="plan-select"></select>
+            </div>
+            <div class="btn-pair">
+              <button class="btn btn-secondary" id="btn-load-plan">Načítať</button>
+              <button class="btn btn-danger"    id="btn-delete-plan">Zmazať</button>
             </div>
           </div>
+        </details>
 
-          <!-- Workout Plan -->
-          <div class="card">
-            <h3 class="card-title">Workout Plan</h3>
-
-            <!-- Preset plan templates -->
-            <div class="plan-templates-row">
-              <select id="preset-plan-select">
-                <option value="">— Load a template plan —</option>
-              </select>
-              <button class="btn btn-secondary" id="btn-load-preset-plan" style="flex-shrink:0;">Load</button>
-            </div>
-
-            <button class="btn btn-accent" id="btn-add-to-plan" style="width:100%; margin-bottom:12px;">+ Add Current Exercise to Plan</button>
-            <div id="plan-list" class="plan-list"></div>
-            <div style="margin-top:12px;">
-              <div class="preset-row" style="margin-bottom:8px;">
-                <input type="text" id="plan-name" placeholder="Plan name…" maxlength="40" />
-                <button class="btn btn-accent" id="btn-save-plan">💾</button>
-              </div>
-              <select id="plan-select" style="margin-bottom:8px;"></select>
-              <div style="display:flex; gap:8px;">
-                <button class="btn btn-secondary" id="btn-load-plan" style="flex:1;">Load Plan</button>
-                <button class="btn btn-danger" id="btn-delete-plan" style="flex:1;">Delete Plan</button>
-              </div>
-            </div>
-            <button class="btn btn-primary" id="btn-start-plan" style="display:none; margin-top:12px;">▶ Start Plan Workout</button>
-          </div>
-
-        </div><!-- /setup-col right -->
-
-      </div><!-- /setup-cols -->
+      </div><!-- /panel-plan -->
 
     </div>
   </section>
@@ -161,9 +223,9 @@
        LOADING SCREEN
   ═══════════════════════════════════════════════════════════════════════════ -->
   <section id="screen-loading" class="screen">
-    <div class="spinner"></div>
-    <h2 id="loading-msg">Initialising…</h2>
-    <p style="color:var(--text-muted); font-size:.85rem;">Please allow camera access when prompted</p>
+    <div class="spinner" aria-hidden="true"></div>
+    <h2 id="loading-msg" role="status" aria-live="polite">Spúšťam&hellip;</h2>
+    <p style="color:var(--text-muted); font-size:.85rem;">Keď sa opýta, povoľ prístup ku kamere</p>
   </section>
 
 
@@ -173,21 +235,23 @@
   <section id="screen-workout" class="screen">
 
     <div class="workout-header">
-      <button class="btn btn-ghost" id="btn-back">← Back</button>
-      <h2 id="workout-title">Exercise</h2>
+      <button class="btn btn-ghost" id="btn-back">&larr; Späť</button>
+      <div class="workout-header-center">
+        <h2 id="workout-title">Cvik</h2>
+        <p class="workout-subtitle" id="workout-set-subtitle" role="status" aria-live="polite"></p>
+      </div>
       <div class="workout-header-right">
-        <button class="btn-audio" id="btn-audio-toggle" title="Toggle beep sound">🔔</button>
+        <button class="btn-audio" id="btn-audio-toggle" aria-label="Zvukový signál" aria-pressed="true" title="Zapnúť/vypnúť pípanie">&#128276;</button>
       </div>
     </div>
 
-    <!-- Timers bar -->
     <div class="workout-timers-bar">
       <div class="timer-chip">
-        <span class="timer-chip-label">Workout</span>
+        <span class="timer-chip-label">Tréning</span>
         <span class="timer-chip-value" id="workout-total-timer">00:00</span>
       </div>
       <div class="timer-chip">
-        <span class="timer-chip-label">Set</span>
+        <span class="timer-chip-label">Séria</span>
         <span class="timer-chip-value" id="workout-set-timer">00:00</span>
       </div>
     </div>
@@ -197,64 +261,117 @@
       <!-- Camera column -->
       <div class="workout-camera-col">
         <div class="camera-wrapper">
+          <!-- Video is CSS-mirrored (scaleX(-1)) to show a natural selfie mirror.
+               Detection runs with flipHorizontal:false, so the canvas is mirrored
+               with it and keypoint names stay anatomically correct. -->
           <video id="camera-feed" autoplay muted playsinline></video>
-          <canvas id="pose-canvas"></canvas>
-          <div class="angle-badge" id="angle-display">--°</div>
-          <div class="flash-overlay" id="flash-overlay"></div>
+          <canvas id="pose-canvas" aria-hidden="true"></canvas>
+          <div class="angle-badge" id="angle-display" aria-hidden="true">--&deg;</div>
+          <div class="quality-badge none" id="quality-badge" role="status" aria-live="polite">&#9679; Bez signálu</div>
+          <div class="flash-overlay" id="flash-overlay" aria-hidden="true"></div>
         </div>
+
+        <!-- Live form feedback -->
+        <div class="form-coach" id="form-coach">
+          <div class="form-gauge" aria-hidden="true">
+            <div class="form-gauge-fill" id="form-gauge-fill"></div>
+            <div class="form-gauge-mid" title="Tu sa opakovanie započíta"></div>
+          </div>
+          <div class="form-coach-row">
+            <span class="form-phase" id="form-phase">Pripravený</span>
+            <span class="form-coach-text" id="form-coach-text" role="status" aria-live="polite" aria-atomic="true">Zaujmi polohu&hellip;</span>
+          </div>
+          <div class="form-rom-row">
+            <span class="form-rom-chip" id="form-rom-left">L <b>&mdash;</b></span>
+            <span class="form-rom-chip" id="form-rom-right">R <b>&mdash;</b></span>
+          </div>
+        </div>
+
+        <div class="camera-hint" id="camera-hint"></div>
       </div>
 
       <!-- Stats column -->
       <div class="workout-stats-col">
 
-        <!-- Set / Rep status row -->
+        <div class="weight-row">
+          <label for="weight-input">&#9878; Váha</label>
+          <button class="btn-stepper btn-weight-step" id="btn-weight-minus" type="button" aria-label="O 2,5 kilogramu menej">&minus;</button>
+          <input type="number" id="weight-input" class="weight-input" min="0" max="200" step="0.5" placeholder="0" inputmode="decimal" />
+          <span class="weight-unit">kg</span>
+          <button class="btn-stepper btn-weight-step" id="btn-weight-plus" type="button" aria-label="O 2,5 kilogramu viac">+</button>
+        </div>
+        <div id="prev-session-hint" class="prev-session-hint" style="display:none;"></div>
+
         <div class="stats-row">
           <div class="stat-card">
-            <div class="stat-label">Set</div>
+            <div class="stat-label">Séria</div>
             <div class="stat-value" id="set-display">1 / 3</div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">Reps</div>
+            <div class="stat-label">Opakovania</div>
             <div class="stat-value" id="rep-display">0 / 12</div>
           </div>
         </div>
 
-        <!-- Big rep count -->
-        <div class="rep-counter-block">
-          <div>
-            <div class="rep-label">Current Reps</div>
-            <div class="rep-big" id="rep-count">0</div>
-            <div class="rep-target">Target: <span id="target-reps-display">12</span></div>
+        <div class="bilateral-row">
+          <div class="bilateral-chip" id="bilateral-left">
+            <div class="bilateral-chip-label">Ľavá</div>
+            <div class="bilateral-chip-angle" id="left-angle">--</div>
           </div>
-          <div style="font-size:3rem; opacity:.25;">💪</div>
+          <div class="bilateral-chip" id="bilateral-right">
+            <div class="bilateral-chip-label">Pravá</div>
+            <div class="bilateral-chip-angle" id="right-angle">--</div>
+          </div>
         </div>
 
-        <!-- Progress bars -->
+        <div class="imbalance-warning" id="imbalance-warning" role="status" aria-live="polite"></div>
+
+        <div class="rep-counter-block">
+          <div>
+            <div class="rep-label">Opakovania</div>
+            <div class="rep-big" id="rep-count" role="status" aria-live="assertive" aria-atomic="true">0</div>
+            <div class="rep-target">Cieľ: <span id="target-reps-display">12</span></div>
+          </div>
+          <div class="rep-counter-emoji" aria-hidden="true">&#128170;</div>
+        </div>
+
         <div class="progress-section">
           <div class="progress-row">
             <div class="progress-meta">
-              <span>Set progress</span>
+              <span id="bar-set-label">Postup v sérii</span>
               <span id="pct-set">0%</span>
             </div>
-            <div class="progress-track">
+            <div class="progress-track" id="bar-set-track" role="progressbar"
+                 aria-labelledby="bar-set-label" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
               <div class="progress-fill" id="bar-set" style="width:0%"></div>
             </div>
           </div>
           <div class="progress-row">
             <div class="progress-meta">
-              <span>Overall progress</span>
+              <span id="bar-overall-label">Celkový postup</span>
               <span id="pct-overall">0%</span>
             </div>
-            <div class="progress-track">
+            <div class="progress-track" id="bar-overall-track" role="progressbar"
+                 aria-labelledby="bar-overall-label" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
               <div class="progress-fill accent" id="bar-overall" style="width:0%"></div>
             </div>
           </div>
         </div>
 
-        <!-- Controls -->
         <div class="workout-controls">
-          <button class="btn btn-secondary" id="btn-pause">⏸ Pause</button>
-          <button class="btn btn-primary" id="btn-next-set">Next Set ▶</button>
+          <button class="btn btn-secondary" id="btn-pause">&#9208; Pauza</button>
+          <button class="btn btn-primary"   id="btn-next-set">Ďalšia séria &#9654;</button>
+        </div>
+
+        <div class="manual-rep-row">
+          <button class="btn-undo-rep" id="btn-undo-rep" title="Odobrať posledné opakovanie">
+            <span>&#8617; &minus;1 opak.</span>
+            <span class="tap-count-sub">oprav zlý počet</span>
+          </button>
+          <button class="btn-tap-count" id="btn-tap-count">
+            <span>&#128070; +1 opak.</span>
+            <span class="tap-count-sub">ťukni na pripočítanie</span>
+          </button>
         </div>
 
       </div><!-- /workout-stats-col -->
@@ -269,20 +386,23 @@
   ═══════════════════════════════════════════════════════════════════════════ -->
   <section id="screen-rest" class="screen">
     <div class="rest-inner">
-      <p class="rest-set-done" id="rest-set-done">Set 1 complete!</p>
+      <p class="rest-set-done" id="rest-set-done" role="status" aria-live="polite">Séria 1 hotová!</p>
       <div class="rest-timer-ring">
         <svg class="rest-ring-svg" viewBox="0 0 120 120" fill="none" aria-hidden="true">
-          <circle class="rest-ring-track" cx="60" cy="60" r="52"/>
+          <circle class="rest-ring-track"    cx="60" cy="60" r="52"/>
           <circle class="rest-ring-progress" id="rest-ring-progress" cx="60" cy="60" r="52"/>
         </svg>
         <div class="rest-ring-content">
-          <div class="rest-countdown" id="rest-countdown">30</div>
-          <div class="rest-label">seconds</div>
+          <div class="rest-countdown" id="rest-countdown" role="timer" aria-live="off">30</div>
+          <div class="rest-label" id="rest-countdown-label">sekúnd</div>
         </div>
       </div>
-      <p class="rest-tip" id="rest-tip">Rest up, next set coming!</p>
+      <p class="rest-tip" id="rest-tip">Oddýchni si, ide ďalšia séria!</p>
       <p class="rest-next-exercise" id="rest-next-exercise" style="display:none;"></p>
-      <button class="btn btn-primary" id="btn-skip-rest">Skip Rest ▶</button>
+      <div class="rest-actions">
+        <button class="btn btn-ghost" id="btn-rest-extend">+30s</button>
+        <button class="btn btn-primary" id="btn-skip-rest">Preskočiť pauzu &#9654;</button>
+      </div>
     </div>
   </section>
 
@@ -292,43 +412,56 @@
   ═══════════════════════════════════════════════════════════════════════════ -->
   <section id="screen-complete" class="screen">
     <div class="complete-inner">
-      <div class="complete-trophy">🏆</div>
-      <h1>Workout Complete!</h1>
+      <div class="complete-trophy" aria-hidden="true">&#127942;</div>
+      <h1>Tréning dokončený!</h1>
 
-      <!-- Single exercise stats -->
       <div class="complete-stats" id="complete-single-stats">
-        <div class="complete-stat">
-          <span>Exercise</span>
-          <span id="complete-exercise">—</span>
-        </div>
-        <div class="complete-stat">
-          <span>Sets completed</span>
-          <span id="complete-sets">—</span>
-        </div>
-        <div class="complete-stat">
-          <span>Total reps</span>
-          <span id="complete-reps">—</span>
-        </div>
-        <div class="complete-stat">
-          <span>Total time</span>
-          <span id="complete-time">—</span>
+        <div class="complete-stat"><span>Cvik</span>     <span id="complete-exercise">&mdash;</span></div>
+        <div class="complete-stat"><span>Odcvičené série</span><span id="complete-sets">&mdash;</span></div>
+        <div class="complete-stat"><span>Opakovaní spolu</span>   <span id="complete-reps">&mdash;</span></div>
+        <div class="complete-stat"><span>Celkový objem</span> <span id="complete-volume">&mdash;</span></div>
+        <div class="complete-stat"><span>Celkový čas</span>   <span id="complete-time">&mdash;</span></div>
+      </div>
+
+      <div class="complete-plan-stats" id="complete-plan-stats" style="display:none;">
+        <div id="plan-summary-list"></div>
+        <div class="complete-stat complete-stat-total">
+          <span>Celkový čas tréningu</span>
+          <span id="complete-plan-time">&mdash;</span>
         </div>
       </div>
 
-      <!-- Plan summary stats -->
-      <div class="complete-plan-stats" id="complete-plan-stats" style="display:none;">
-        <div id="plan-summary-list"></div>
-        <div class="complete-stat" style="margin-top:12px; border-top:1px solid var(--border); padding-top:12px;">
-          <span>Total workout time</span>
-          <span id="complete-plan-time">—</span>
+      <div class="share-block">
+        <div class="share-title">Poslať tréning ďalej</div>
+        <div class="share-actions">
+          <button class="btn btn-secondary" id="btn-export-fit">&#8986; Garmin / Strava (.FIT)</button>
+          <button class="btn btn-secondary" id="btn-export-tcx">&#128196; .TCX</button>
+          <button class="btn btn-accent" id="btn-strava-upload" style="display:none;">Poslať do Stravy</button>
         </div>
+        <p class="share-hint" id="share-hint" role="status" aria-live="polite">
+          .FIT zachová každú sériu, opakovanie aj váhu. Garmin Connect &rarr; <b>+</b> &rarr; Import Data;
+          Strava &rarr; <b>+</b> &rarr; Upload Activity.
+        </p>
       </div>
 
       <div class="complete-actions">
-        <button class="btn btn-primary" id="btn-do-again">🔄 Do Again</button>
-        <button class="btn btn-secondary" id="btn-home">🏠 Home</button>
+        <button class="btn btn-primary"   id="btn-do-again">&#128260; Zopakovať</button>
+        <button class="btn btn-secondary" id="btn-home">&#127968; Domov</button>
       </div>
     </div>
+  </section>
+
+
+  <!-- ════════════════════════════════════════════════════════════════════════
+       HISTORY SCREEN
+  ═══════════════════════════════════════════════════════════════════════════ -->
+  <section id="screen-history" class="screen">
+    <div class="history-header">
+      <button class="btn btn-ghost" id="btn-history-back">&larr; Späť</button>
+      <h2 class="history-header-title">História tréningov</h2>
+      <button class="btn btn-ghost btn-sm" id="btn-export-history">&#11015; Exportovať</button>
+    </div>
+    <div id="history-list" class="history-list"></div>
   </section>
 
 
@@ -336,6 +469,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
   <script src="js/config.js"></script>
+  <script src="js/export.js"></script>
   <script src="js/core.js"></script>
   <script src="js/app.js"></script>
 </body>
