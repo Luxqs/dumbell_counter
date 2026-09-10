@@ -28,7 +28,13 @@ window.AudioContext=class{constructor(){this.state='running';this.currentTime=0;
   createOscillator(){return{connect(){},start(){},stop(){},frequency:{},type:''};}
   createGain(){return{connect(){},gain:{setValueAtTime(){},exponentialRampToValueAtTime(){}}};}
   resume(){}};
-window.navigator.mediaDevices={getUserMedia:async()=>({getTracks:()=>[{stop(){}}]})};
+// The fake stream carries real video tracks so the 'ended' handler the app
+// attaches (camera stolen by another app, permission revoked) is exercised.
+const VTRACKS=[];
+const mkTrack=()=>{const l={};return{stop(){},addEventListener:(e,f)=>{(l[e]=l[e]||[]).push(f);},
+  _fire:e=>(l[e]||[]).forEach(f=>f())};};
+window.navigator.mediaDevices={getUserMedia:async()=>{const t=mkTrack();VTRACKS.length=0;VTRACKS.push(t);
+  return{getTracks:()=>[t],getVideoTracks:()=>[t]};}};
 Object.defineProperty(window.navigator,'wakeLock',{value:{request:async()=>({release:async()=>{},addEventListener(){}})},configurable:true});
 window.confirm=()=>true; window.alert=m=>{throw new Error('alert: '+m);};
 window.URL.createObjectURL=()=>'blob:x'; window.URL.revokeObjectURL=()=>{};
@@ -63,9 +69,22 @@ window.eval(sources+`
 const G=n=>window.__get(n);
 
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-async function pump(n=1){for(let i=0;i<n;i++){const q=raf;raf=[];for(const r of q){await r.cb();}await sleep(0);}}
+// `gap` is the wall-clock spacing between pumped frames. It matters: the
+// counting engine confirms a threshold crossing over a span of TIME, so a rep
+// pumped as 36 frames inside the same millisecond is not a rep any real camera
+// could produce, and the engine correctly refuses to count it. Frames driving a
+// synthetic rep are spaced like a real camera; everything else pumps at 0.
+async function pump(n=1,gap=0){for(let i=0;i<n;i++){const q=raf;raf=[];for(const r of q){await r.cb();}await sleep(gap);}}
 const $=id=>doc.getElementById(id);
 const active=()=>['setup','loading','workout','rest','complete','history'].find(s=>$('screen-'+s).classList.contains('active'));
+// The first set of an exercise asks the lifter to demonstrate their own range.
+// Tests that are not about calibration decline it, the way a returning user
+// would have already done.
+// Null-safe on purpose: this helper runs in tests that are NOT about
+// calibration, and it must never be the reason one of them fails when the suite
+// is pointed at an older checkout to verify a (regression) test.
+const calibOpen=()=>!!$('calib-overlay')?.classList.contains('active');
+const skipCalib=()=>{ if(calibOpen()) $('btn-calib-skip').click(); };
 
 let pass=0,fail=0;
 const t=async(name,fn)=>{try{await fn();console.log('  ✓ '+name);pass++;}catch(e){console.log('  ✗ '+name+'\n      '+e.message);fail++;}};
@@ -237,7 +256,67 @@ await t('a saved plan holding a dead exercise is sanitised on load',()=>{
   assert.strictEqual(app.workoutPlan[0].exerciseId,'bicep-curl');
 });
 
+console.log('\n▸ calibration — counting by this person\'s own range');
+await t('the first set of an exercise asks for a range before counting anything (regression)',async()=>{
+  $('tab-single').click();
+  $('exercise-select').value='bicep-curl';
+  $('exercise-select').dispatchEvent(new window.Event('change'));
+  $('sets-display').value='1';$('sets-display').dispatchEvent(new window.Event('change'));
+  $('reps-display').value='2';$('reps-display').dispatchEvent(new window.Event('change'));
+  $('rest-sets-input').value='0';$('rest-sets-input').dispatchEvent(new window.Event('change'));
+  assert.ok($('calib-row-status').textContent.includes('Nekalibrované'),$('calib-row-status').textContent);
+  $('btn-start').click();await sleep(60);await pump(1);
+  assert.strictEqual(active(),'workout');
+  assert.ok(calibOpen(),'no calibration prompt before the first set');
+  assert.strictEqual($('btn-calib-accept').disabled,true,'accept enabled before any movement');
+});
+await t('measuring counts nothing, and a demonstrated range unlocks it',async()=>{
+  await doReps(2);
+  assert.strictEqual(app.counter.reps,0,'reps counted while merely measuring: '+app.counter.reps);
+  assert.strictEqual($('btn-calib-accept').disabled,false,$('calib-status').textContent);
+  assert.ok(/\d+° – \d+°/.test($('calib-range').textContent),$('calib-range').textContent);
+});
+await t('accepting rewrites the counting band and says so',()=>{
+  $('btn-calib-accept').click();
+  assert.ok(!calibOpen());
+  assert.strictEqual(app.counter.calibrated,true);
+  const b=app.counter.counting,cfg=EXERCISES.find(e=>e.id==='bicep-curl').counting;
+  assert.notStrictEqual(b.peakThreshold,cfg.peakThreshold,'band unchanged: '+JSON.stringify(b));
+  const stored=app.calibration.get('bicep-curl');
+  assert.ok(stored&&stored.rest>stored.peak,JSON.stringify(stored));
+  assert.ok($('workout-set-subtitle').textContent.includes('kalibrované'),$('workout-set-subtitle').textContent);
+});
+await t('a calibrated exercise is never asked again',async()=>{
+  $('btn-tap-count').click();$('btn-tap-count').click();
+  await sleep(500);
+  $('rpe-overlay').querySelector('.rpe-skip').click();
+  assert.strictEqual(active(),'complete');
+  $('btn-home').click();
+  assert.ok($('calib-row-status').textContent.includes('Kalibrované'),$('calib-row-status').textContent);
+  $('btn-start').click();await sleep(60);await pump(1);
+  assert.ok(!calibOpen(),'asked again after calibrating');
+  $('btn-back').click();
+  assert.strictEqual(active(),'setup');
+});
+await t('declining is remembered too, so nobody is asked every session',async()=>{
+  $('exercise-select').value='goblet-squat';
+  $('exercise-select').dispatchEvent(new window.Event('change'));
+  $('btn-start').click();await sleep(60);await pump(1);
+  assert.ok(calibOpen(),'a fresh exercise should still ask');
+  $('btn-calib-skip').click();
+  assert.strictEqual(app.counter.calibrated,false);
+  assert.ok(app.calibration.entry('goblet-squat').skipped);
+  assert.ok($('calib-row-status').textContent.includes('Bez kalibrácie'),$('calib-row-status').textContent);
+  $('btn-back').click();
+  assert.strictEqual(active(),'setup');
+  $('tab-plan').click();
+});
+
 console.log('\n▸ full 2-exercise plan workout, end to end');
+// The calibration section above ran a real workout to get a real range, so the
+// history is not empty any more. Clear it, so the assertions below can keep
+// counting exact entries instead of deltas.
+app.history.clear();
 app.workoutPlan=[
   {exerciseId:'bicep-curl',sets:2,reps:2,restBetweenSets:0,restAfterExercise:0},
   {exerciseId:'dumbbell-row',sets:1,reps:2,restBetweenSets:0,restAfterExercise:0}];
@@ -246,16 +325,21 @@ async function doReps(n){
   const ex=EXERCISES.find(e=>e.id===app.exerciseId);EXJOINTS=ex.joints;
   const c=ex.counting,inc=c.direction==='increase';
   const rest=c.restThreshold+(inc?-15:15),peak=c.idealPeak;
-  ANGLE=rest;await pump(6);
+  ANGLE=rest;await pump(6,20);
   for(let k=0;k<n;k++){
-    for(let f=1;f<=18;f++){ANGLE=rest+(peak-rest)*f/18;await pump(1);}
-    for(let f=1;f<=18;f++){ANGLE=peak+(rest-peak)*f/18;await pump(1);}
-    await sleep(300);   // clear REP_COOLDOWN_MS between reps
+    for(let f=1;f<=18;f++){ANGLE=rest+(peak-rest)*f/18;await pump(1,20);}
+    for(let f=1;f<=18;f++){ANGLE=peak+(rest-peak)*f/18;await pump(1,20);}
+    // Sit at the bottom for a few frames, the way a real rep does. The latch
+    // arms on TIME spent back at rest, so a ramp that touches the rest position
+    // for a single frame and instantly reverses is not a rep the engine can
+    // close — and it is not one a human can perform either.
+    ANGLE=rest;await pump(5,20);
   }
 }
 await t('start plan → camera + workout screen',async()=>{
   $('btn-start-plan').click();
   await sleep(60);await pump(1);
+  skipCalib();
   assert.strictEqual(active(),'workout');
   assert.strictEqual(app.exerciseId,'bicep-curl');
   assert.ok($('workout-title').textContent.includes('1 / 2'));
@@ -283,6 +367,7 @@ await t('set 2 finishes the exercise and transitions to the next one',async()=>{
   assert.strictEqual(active(),'rest');
   assert.ok($('rest-next-exercise').textContent.includes('Dumbbell Row'));
   await sleep(450);await pump(1);
+  skipCalib();
   assert.strictEqual(app.exerciseId,'dumbbell-row');
   assert.strictEqual(app.currentSet,1);
   assert.strictEqual(app.planResults.length,1);
@@ -360,6 +445,7 @@ await t('weight stepper clamps at 200 kg (regression)',async()=>{
   $('reps-display').value='1';$('reps-display').dispatchEvent(new window.Event('change'));
   $('rest-sets-input').value='0';$('rest-sets-input').dispatchEvent(new window.Event('change'));
   $('btn-start').click();await sleep(60);await pump(1);
+  skipCalib();
   assert.strictEqual(active(),'workout');
   $('weight-input').value='199';
   for(let i=0;i<5;i++)$('btn-weight-plus').click();
@@ -381,6 +467,24 @@ await t('a detection failure does not kill the loop (regression)',async()=>{
   assert.strictEqual(app._detectFailures,0,'failure counter did not reset on recovery');
   assert.ok(raf.length>0,'loop did not survive recovery');
 });
+await t('pause + resume during an inference leaves ONE loop, not two (regression)',async()=>{
+  // The resume schedules a frame; when the awaited detect() finally returns,
+  // the tick that had been suspended inside it schedules another AND overwrites
+  // app.animationId — so cancelAnimationFrame can never reach the first again.
+  // Two permanently concurrent loops, one more for every pause+resume, spent
+  // straight out of the frame budget the counter depends on.
+  let release;const held=new Promise(r=>release=r);
+  const good=app.detector.detect.bind(app.detector);
+  app.detector.detect=async v=>{await held;return good(v);};
+  const inFlight=pump(1);                 // this tick suspends inside detect()
+  await sleep(10);
+  $('btn-pause').click();                 // pause
+  $('btn-pause').click();                 // resume
+  release();await inFlight;await sleep(10);
+  app.detector.detect=good;
+  assert.strictEqual(raf.length,1,'concurrent detection loops: '+raf.length);
+  assert.strictEqual(app.isPaused,false);
+});
 await t('finishing a single-exercise workout renders single stats',async()=>{
   $('weight-input').value='20';$('weight-input').dispatchEvent(new window.Event('change'));
   $('btn-tap-count').click();
@@ -394,9 +498,100 @@ await t('finishing a single-exercise workout renders single stats',async()=>{
 await t('remembered weight is pre-filled next time',async()=>{
   $('btn-home').click();
   $('btn-start').click();await sleep(60);await pump(1);
+  skipCalib();
   assert.strictEqual(Number($('weight-input').value),20);
   $('btn-back').click();
   assert.strictEqual(active(),'setup');
+});
+await t('the camera can be switched to the rear lens, and a failed switch reverts (regression)',async()=>{
+  // facingMode was hard-coded 'user'. The rear lens is better on every phone,
+  // and with the phone propped up two or three metres away the body is a small
+  // patch of the frame — but a phone with only one camera must not be left
+  // staring at nothing.
+  $('btn-start').click();await sleep(60);await pump(1);
+  skipCalib();
+  const real=window.navigator.mediaDevices.getUserMedia;
+  const asked=[];
+  window.navigator.mediaDevices.getUserMedia=async c=>{asked.push(c.video.facingMode);return real(c);};
+  await app._flipCamera();
+  assert.strictEqual(asked[asked.length-1],'environment',asked.join(','));
+  assert.strictEqual(app._cameraFacing(),'environment');
+  // The mirror is a selfie effect. Leaving it on the rear feed puts the
+  // skeleton on the wrong side of the body.
+  assert.ok(app.workout.cameraWrapper.classList.contains('rear'),'rear feed still mirrored');
+  await app._flipCamera();
+  assert.strictEqual(app._cameraFacing(),'user');
+  assert.ok(!app.workout.cameraWrapper.classList.contains('rear'));
+
+  window.navigator.mediaDevices.getUserMedia=async c=>{
+    if(c.video.facingMode==='user') return real(c);
+    throw Object.assign(new Error('no such device'),{name:'NotFoundError'});
+  };
+  await app._flipCamera();
+  assert.strictEqual(app._cameraFacing(),'user','a failed switch must revert');
+  assert.ok(app.stream,'left with no camera at all after a failed switch');
+  window.navigator.mediaDevices.getUserMedia=real;
+  $('btn-back').click();
+  assert.strictEqual(active(),'setup');
+});
+
+console.log('\n▸ leaving a workout in progress');
+app.workoutPlan=[
+  {exerciseId:'bicep-curl',  sets:2,reps:2,restBetweenSets:0,restAfterExercise:0},
+  {exerciseId:'goblet-squat',sets:1,reps:2,restBetweenSets:0,restAfterExercise:0}];
+app._setMode('plan');app._renderPlanList();
+await t('mid-plan the last set says "Ďalší cvik", not "Dokončiť" (regression)',async()=>{
+  $('btn-start-plan').click();await sleep(60);await pump(1);
+  skipCalib();
+  assert.strictEqual(active(),'workout');
+  assert.strictEqual($('btn-next-set').textContent,'Ďalšia séria ▶');
+  $('btn-tap-count').click();$('btn-tap-count').click();
+  await sleep(500);
+  $('rpe-overlay').querySelector('.rpe-skip').click();
+  await sleep(450);await pump(1);
+  assert.strictEqual(app.currentSet,2);
+  // This button starts the next EXERCISE. Calling it "Dokončiť" made it read
+  // as the end of the workout — the one label a user has to trust before tapping.
+  assert.strictEqual($('btn-next-set').textContent,'Ďalší cvik ▶',$('btn-next-set').textContent);
+});
+await t('"Celkový postup" counts the whole plan, not just this exercise (regression)',()=>{
+  // 3 sets planned across two exercises, one of them done: 33%, not 50%.
+  assert.strictEqual($('pct-overall').textContent,'33%',$('pct-overall').textContent);
+  assert.strictEqual($('bar-overall-track').getAttribute('aria-valuenow'),'33');
+});
+await t('leaving mid-workout saves the sets already done (regression)',()=>{
+  // Four finished exercises of a five-exercise plan used to reach the history
+  // as nothing at all, and the question did not say so either.
+  const before=app.history.list().length;
+  $('btn-tap-count').click();          // one rep into the unfinished set 2
+  $('btn-back').click();
+  assert.strictEqual(active(),'setup');
+  const h=app.history.list();
+  assert.strictEqual(h.length,before+1,'the finished set was thrown away');
+  assert.ok(/nedokončený/.test(h[0].planName),h[0].planName);
+  assert.strictEqual(h[0].exercises.length,1);
+  assert.strictEqual(h[0].exercises[0].setData.length,1,'completed sets saved');
+  assert.strictEqual(h[0].exercises[0].totalReps,2);
+});
+await t('a rest can be ended without throwing the session away (regression)',async()=>{
+  // The rest screen had no exit at all: during a 3-minute rest the only ways
+  // out were finishing the workout or closing the tab.
+  assert.ok($('btn-rest-end'),'no way out of the rest screen');
+  app._setMode('single');
+  $('exercise-select').value='bicep-curl';
+  $('sets-display').value='3';$('sets-display').dispatchEvent(new window.Event('change'));
+  $('reps-display').value='1';$('reps-display').dispatchEvent(new window.Event('change'));
+  $('rest-sets-input').value='60';$('rest-sets-input').dispatchEvent(new window.Event('change'));
+  $('btn-start').click();await sleep(60);await pump(1);
+  skipCalib();
+  $('btn-tap-count').click();await sleep(500);
+  $('rpe-overlay').querySelector('.rpe-skip').click();
+  assert.strictEqual(active(),'rest');
+  const before=app.history.list().length;
+  $('btn-rest-end').click();
+  assert.strictEqual(active(),'setup');
+  assert.strictEqual(app.restTimer,null,'rest interval left running');
+  assert.strictEqual(app.history.list().length,before+1);
 });
 
 console.log('\n▸ accessibility');

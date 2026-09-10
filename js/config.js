@@ -6,6 +6,7 @@ const EXERCISES = [
     description: 'Tlak činiek nahor z hrudníka v ľahu',
     tips: 'Nohy pevne na zemi, mierne prehnutie chrbta, tlač do úplného vystretia.',
     cameraHint: '📷 Bočný pohľad · kamera vo výške ramien',
+    view: 'sagittal',            // what assessFraming() expects to see
     joints: { a: 'shoulder', b: 'elbow', c: 'wrist' },
     counting: {
       direction:     'increase',
@@ -27,6 +28,7 @@ const EXERCISES = [
     description: 'Zdvíhanie činiek k ramenám',
     tips: 'Lakte drž pri tele, choď do plného rozsahu.',
     cameraHint: '📷 Bočný pohľad · kamera vo výške pásu',
+    view: 'sagittal',            // what assessFraming() expects to see
     joints: { a: 'shoulder', b: 'elbow', c: 'wrist' },
     counting: {
       direction:     'decrease',
@@ -49,6 +51,7 @@ const EXERCISES = [
     description: 'Zdvih v sede s lakťom opretým o vnútro stehna',
     tips: 'Lakeť pevne opri o stehno, zdvíhaj pomaly a silno stiahni na vrchole.',
     cameraHint: '📷 Bočný pohľad · kamera vo výške kolien',
+    view: 'sagittal',            // what assessFraming() expects to see
     joints: { a: 'shoulder', b: 'elbow', c: 'wrist' },
     counting: {
       direction:     'decrease',
@@ -70,6 +73,7 @@ const EXERCISES = [
     description: 'Klik s nohami vyloženými na stoličke alebo lavičke',
     tips: 'Telo v jednej línii, ruky na šírku ramien, hrudník spusti k zemi.',
     cameraHint: '📷 Bočný pohľad · kamera pri zemi',
+    view: 'sagittal',            // what assessFraming() expects to see
     joints: { a: 'shoulder', b: 'elbow', c: 'wrist' },
     counting: {
       direction:     'increase',
@@ -91,6 +95,7 @@ const EXERCISES = [
     description: 'Rozovretie rúk do strán a stiahnutie k sebe',
     tips: 'Lakte stále mierne pokrčené, spúšťaj kontrolovane, hore stiahni hrudník.',
     cameraHint: '📷 Čelný pohľad · kamera vo výške hrudníka',
+    view: 'frontal',            // what assessFraming() expects to see
     joints: { a: 'hip', b: 'shoulder', c: 'elbow' },
     counting: {
       direction:     'decrease',
@@ -113,6 +118,7 @@ const EXERCISES = [
     description: 'Príťah jednou rukou v predklone k bedru',
     tips: 'Rovný chrbát, spevni stred tela, lakeť ťahaj dozadu k stropu.',
     cameraHint: '📷 Bočný pohľad · kamera vo výške bokov',
+    view: 'sagittal',            // what assessFraming() expects to see
     joints: { a: 'shoulder', b: 'elbow', c: 'wrist' },
     counting: {
       direction:     'decrease',
@@ -134,6 +140,7 @@ const EXERCISES = [
     description: 'Drep s jednou činkou držanou pri hrudníku',
     tips: 'Hrudník hore, kolená v línii špičiek, boky dozadu a dole, päty na zemi.',
     cameraHint: '📷 Bočný pohľad · kamera vo výške bokov',
+    view: 'sagittal',            // what assessFraming() expects to see
     joints: { a: 'hip', b: 'knee', c: 'ankle' },
     counting: {
       direction:     'decrease',
@@ -155,6 +162,7 @@ const EXERCISES = [
     description: 'Zdvih s neutrálnym úchopom, palce nahor',
     tips: 'Palce stále hore, lakte bez pohybu, plný rozsah.',
     cameraHint: '📷 Bočný pohľad · kamera vo výške pásu',
+    view: 'sagittal',            // what assessFraming() expects to see
     joints: { a: 'shoulder', b: 'elbow', c: 'wrist' },
     counting: {
       direction:     'decrease',
@@ -176,6 +184,7 @@ const EXERCISES = [
     description: 'Výpad vpred s činkami pri bokoch',
     tips: 'Predné koleno nad členkom, zadné takmer po zem, trup vzpriamený.',
     cameraHint: '📷 Bočný pohľad · kamera vo výške bokov',
+    view: 'sagittal',            // what assessFraming() expects to see
     joints: { a: 'hip', b: 'knee', c: 'ankle' },
     counting: {
       direction:     'decrease',
@@ -197,6 +206,7 @@ const EXERCISES = [
     description: 'Rozpažovanie v predklone na zadné delty',
     tips: 'Predklon v bedrách asi 45°, ruky dvíhaj do strán.',
     cameraHint: '📷 Zozadu alebo z boku · kamera vo výške bokov',
+    view: 'any',            // what assessFraming() expects to see
     joints: { a: 'hip', b: 'shoulder', c: 'elbow' },
     counting: {
       direction:     'increase',
@@ -218,6 +228,7 @@ const EXERCISES = [
     description: 'Rozpažovanie do výšky ramien',
     tips: 'Lakte mierne pokrčené, veď pohyb lakťami, nie dlaňami.',
     cameraHint: '📷 Čelný pohľad · kamera vo výške ramien',
+    view: 'frontal',            // what assessFraming() expects to see
     joints: { a: 'hip', b: 'shoulder', c: 'elbow' },
     counting: {
       direction:     'increase',
@@ -239,6 +250,7 @@ const EXERCISES = [
     description: 'Zhyb z visu až po bradu nad hrazdou',
     tips: 'Začni z úplného visu, lakte ťahaj k bokom, brada nad hrazdu.',
     cameraHint: '📷 Bočný pohľad · kamera vo výške hrazdy',
+    view: 'sagittal',            // what assessFraming() expects to see
     joints: { a: 'shoulder', b: 'elbow', c: 'wrist' },
     counting: {
       direction:     'decrease',
@@ -260,6 +272,7 @@ const EXERCISES = [
     description: 'Predklon v bedrách so spúšťaním činiek pozdĺž nôh',
     tips: 'Kolená mierne pokrčené, ohyb v bedrách nie v páse, dole cíť ťah v zadnej strane stehien.',
     cameraHint: '📷 Bočný pohľad · kamera vo výške bokov',
+    view: 'sagittal',            // what assessFraming() expects to see
     joints: { a: 'shoulder', b: 'hip', c: 'knee' },
     counting: {
       direction:     'decrease',
@@ -281,6 +294,7 @@ const EXERCISES = [
     description: 'Tlak činiek nad hlavu z výšky ramien',
     tips: 'Začni s lakťami asi na 90°, tlač priamo hore do úplného vystretia.',
     cameraHint: '📷 Z boku alebo spredu · kamera vo výške ramien',
+    view: 'any',            // what assessFraming() expects to see
     joints: { a: 'shoulder', b: 'elbow', c: 'wrist' },
     counting: {
       direction:     'increase',
@@ -302,6 +316,7 @@ const EXERCISES = [
     description: 'Extenzia tricepsu v ľahu smerom k čelu',
     tips: 'Nadlaktia drž zvisle a bez pohybu, hýbu sa len predlaktia, spúšťaj kontrolovane.',
     cameraHint: '📷 Bočný pohľad · kamera vo výške hlavy',
+    view: 'sagittal',            // what assessFraming() expects to see
     joints: { a: 'shoulder', b: 'elbow', c: 'wrist' },
     counting: {
       direction:     'increase',
@@ -323,6 +338,7 @@ const EXERCISES = [
     description: 'Extenzia tricepsu s činkou nad hlavou',
     tips: 'Nadlaktia drž zvisle a bez pohybu, hýbu sa len predlaktia.',
     cameraHint: '📷 Bočný pohľad · kamera vo výške ramien',
+    view: 'sagittal',            // what assessFraming() expects to see
     joints: { a: 'shoulder', b: 'elbow', c: 'wrist' },
     counting: {
       direction:     'increase',
@@ -477,12 +493,46 @@ const SKELETON = [
 ];
 
 // ─── Detection & Counting Constants ─────────────────────────────────────────
-const MIN_KEYPOINT_CONFIDENCE = 0.5;    // Raised from 0.3 — filters noisy detections
-const EMA_ALPHA               = 0.35;   // Exponential moving average weight
-const REP_COOLDOWN_MS         = 250;    // Noise floor only. Double-counting is prevented by the
-                                        // armed latch in RepCounter, not by this — so it no longer
-                                        // has to be long enough to swallow a genuinely fast rep.
+//
+// Everything here that describes *time* is expressed in milliseconds or in
+// degrees per second, never in frames. The engine used to confirm a threshold
+// crossing over a fixed number of frames, which made counting depend on how
+// fast the phone happened to be: measured on a textbook 2.0 s rep, every
+// exercise scored 1 rep out of 5 at 8 fps and 5 out of 5 at 15 fps, because the
+// angular overshoot a 2-frame confirmation demands is 2 x (speed / fps).
+// MoveNet Thunder over WebGL runs at 8-15 fps on a mid-range phone, so that was
+// the normal case, not the edge case.
+
+// Trusted confidence: what the skeleton is drawn from and what a clean reading
+// requires.
+const MIN_KEYPOINT_CONFIDENCE = 0.5;
+// Occlusion is normal mid-rep — a thigh covers the hip at the bottom of a squat
+// and its score falls to 0.3-0.4. Treating 0.5 as a cliff threw away the whole
+// set: hip at 0.55 counted 5 reps of 5, at 0.49 it counted 0 and told the user
+// to step back, which is the wrong advice for something being covered up.
+// Between the hard floor and MIN_KEYPOINT_CONFIDENCE a keypoint is still used
+// and the reading is marked uncertain.
+const KP_CONFIDENCE_HARD = 0.35;
+// Lower-body joints hide behind the limb that moves them, so they need a lower
+// floor than wrists and elbows.
+const KP_CONFIDENCE_HARD_BY_JOINT = { hip: 0.28, knee: 0.28, ankle: 0.28 };
+// How long the vertex joint and its far anchor may be reused after dropping out
+// completely. The distal joint is never substituted — it is the end that
+// actually travels, so a stale copy of it would invent a held position.
+const KP_STALE_MAX_MS      = 250;
+
+// Smoothing time constant for the displayed angle. 77 ms is exactly what
+// EMA_ALPHA 0.35 per frame meant at 30 fps — the difference is that it now
+// means the same thing at 12 fps and at 60 fps.
+const EMA_TAU_MS           = 77;
+const REP_COOLDOWN_MS      = 250;    // noise floor only; double-counting is prevented by the
+                                     // armed latch in RepCounter, not by this.
 const DEFAULT_REST_BETWEEN_SETS = 30;
+// Frame interval used for the first frame, and the ceiling applied to a gap
+// (a backgrounded tab, a stalled camera) so one long pause cannot be treated
+// as one enormous movement.
+const DEFAULT_FRAME_MS     = 33;
+const MAX_FRAME_MS         = 500;
 
 // ─── Live form-feedback tuning ──────────────────────────────────────────────
 // Fraction of the ideal range that still counts as "shallow" — drives the
@@ -497,18 +547,34 @@ const ROM_HISTORY_LEN      = 5;
 // the side actually doing the rep. Below this margin the sides are considered
 // level and the better-tracked one is used instead.
 const SIDE_LEAD_MARGIN     = 0.08;
-// Per-side motion is tracked as a decaying average of how many degrees the joint
-// moves per frame. It is what separates the limb performing the exercise from a
-// limb that is merely parked in frame — a row's bracing arm, a concentration
-// curl's free arm. MOTION_DECAY keeps that memory alive across the pause at the
-// top and bottom of a rep; MOTION_FLOOR is the deg/frame below which a limb is
-// treated as stationary.
-const MOTION_DECAY         = 0.90;
-const MOTION_FLOOR         = 0.35;
-// Consecutive frames a threshold crossing must persist before it is believed.
-// Counting reads the raw joint angle (the smoothed one lags too far behind a
-// real rep), so this is what keeps a single bad inference from faking a rep.
-const CONFIRM_FRAMES       = 2;
+// Per-side motion is a decaying average of joint speed in DEGREES PER SECOND —
+// frame-rate independent, unlike the deg/frame version it replaces, which
+// silently changed meaning with the phone's speed. It is what separates the
+// limb performing the exercise from a limb merely parked in frame: a row's
+// bracing arm, a concentration curl's free arm. MOTION_TAU_MS keeps that memory
+// alive across the pause at the top and bottom of a rep.
+const MOTION_TAU_MS        = 300;
+const MOTION_FLOOR_DPS     = 10;
+// How long a threshold crossing must hold before it is believed, measured from
+// the crossing itself (the previous frame), not from the first frame observed
+// past the line. At 30 fps this is the same two frames as before; at 60 fps it
+// filters twice as many; at 12 fps a single frame already spans it, and the
+// crossing is accepted as long as the joint was travelling that way beforehand
+// (PROGRESS_EPS / the approach streak) rather than being demanded to overshoot.
+const CONFIRM_MS           = 60;
+// Progress change per frame below which a side counts as neither approaching
+// the peak nor returning — noise, not travel.
+const PROGRESS_EPS         = 0.01;
+// A joint that appears to move faster than this did not move — the model put a
+// keypoint on the wrong limb. Such a frame is displayed but never allowed to
+// confirm a threshold crossing, which matters most on a slow phone, where a
+// single frame is otherwise enough to credit a rep on its own.
+const MAX_JOINT_DPS        = 720;
+// Below this measured frame rate the counting engine loses reps no matter how
+// it is tuned, so the app drops from MoveNet Thunder to Lightning and says so.
+const FPS_LOW_THRESHOLD    = 12;
+// Frames averaged for the on-screen fps readout.
+const FPS_WINDOW           = 30;
 // How long a rep verdict stays on screen. Verdicts are single-frame events;
 // without a dwell time they are literally unreadable.
 const COACH_DWELL_MS       = 1400;

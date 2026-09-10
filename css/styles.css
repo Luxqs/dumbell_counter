@@ -455,6 +455,55 @@ input.stepper-value::-webkit-inner-spin-button { -webkit-appearance: none; margi
 }
 .rest-actions .btn-ghost:hover { border-color: var(--primary); color: var(--primary); }
 .rest-actions .btn-primary { flex: 1; }
+/* The only way out of a long rest. .btn-link carries a -15px vertical margin to
+   keep its touch target without moving visually, and it is declared LATER in
+   this file — so a single-class rule here loses on source order, the negative
+   margin survives, and the link overlaps the buttons above it by 15px. Measured
+   in Chromium before this was doubled up. Two classes, so order cannot decide it. */
+.btn-link.rest-end-link { display: block; margin: 30px auto 0; }
+
+/* ── Calibration ─────────────────────────────────────────────────────────── */
+.calib-box { text-align: center; }
+.calib-live { margin: 18px 0 6px; }
+.calib-range {
+  font-size: 2rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--primary);
+  line-height: 1.1;
+}
+.calib-meta { font-size: .8rem; color: var(--text-muted); margin-top: 4px; }
+.calib-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--border);
+  overflow: hidden;
+  margin: 12px 0 10px;
+}
+.calib-bar-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 4px;
+  background: var(--primary);
+  transition: width .15s linear;
+}
+.calib-status { font-size: .85rem; color: var(--text-muted); min-height: 2.4em; margin: 0 0 14px; }
+.calib-status.ready { color: var(--primary); font-weight: 600; }
+.calib-status.warn  { color: var(--warn, #f59e0b); }
+.calib-actions { display: flex; flex-direction: column; gap: 8px; }
+.calib-actions .btn-primary:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Setup-screen calibration state, under the camera hint */
+.calib-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 10px;
+  font-size: .78rem;
+}
+.calib-row-status { color: var(--text-muted); flex: 1 1 100%; }
+.calib-row-status.set { color: var(--primary); }
 
 /* ── Complete Screen ─────────────────────────────────────────────────────── */
 #screen-complete { justify-content: center; text-align: center; }
@@ -761,6 +810,30 @@ input.stepper-value::-webkit-inner-spin-button { -webkit-appearance: none; margi
    because detection runs with flipHorizontal:false (keeps left/right labels
    anatomically correct) and therefore draws in raw camera coordinates. */
 #camera-feed, #pose-canvas { transform: scaleX(-1); }
+/* The rear camera is not a mirror — the lifter is looking at the phone from the
+   other side of the room, not at their own reflection. Un-mirror both layers
+   together, or the skeleton lands on the wrong side of the body. */
+.camera-wrapper.rear #camera-feed, .camera-wrapper.rear #pose-canvas { transform: none; }
+
+/* Front/rear switch, over the camera frame. 44px so it is a real touch target
+   with sweaty hands, and the same .85 backdrop the other overlay chips use so
+   it stays legible over whatever the camera happens to see. */
+.btn-camera-flip {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 22px;
+  background: rgba(10, 12, 16, .85);
+  color: #fff;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.btn-camera-flip:disabled { opacity: .4; cursor: default; }
 
 /* ── Detection Quality Badge ─────────────────────────────────────────────── */
 .quality-badge {
@@ -1123,6 +1196,33 @@ input.stepper-value::-webkit-inner-spin-button { -webkit-appearance: none; margi
   flex-shrink: 0;
   line-height: 1.4;
 }
+/* Per-set breakdown, collapsed. The <summary> carries .history-exercise-row, so
+   it needs the flex layout back — a summary is display:list-item by default and
+   would otherwise stack the two halves. */
+.history-exercise summary.history-exercise-row { cursor: pointer; list-style: none; }
+.history-exercise summary::-webkit-details-marker { display: none; }
+.history-exercise summary.history-exercise-row::after {
+  content: '⌄';
+  color: var(--text-muted);
+  font-size: .8rem;
+  transition: transform .15s ease;
+}
+.history-exercise[open] summary.history-exercise-row::after { transform: rotate(180deg); }
+.history-exercise:last-child summary.history-exercise-row { border-bottom: none; }
+.history-set-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .78rem;
+  margin: 2px 0 10px;
+}
+.history-set-table th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 4px 6px 4px 0;
+}
+.history-set-table td { padding: 3px 6px 3px 0; color: var(--text); }
+.history-set-table td:first-child, .history-set-table th:first-child { color: var(--text-muted); width: 3.2em; }
 
 /* ── Previous Session Hint ───────────────────────────────────────────────── */
 .prev-session-hint {

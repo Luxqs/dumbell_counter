@@ -7,6 +7,8 @@
   <meta name="description" content="Počítadlo opakovaní a sérií s činkami cez kameru. Spočíta opakovania, odmeria pauzy a pošle tréning do Garminu alebo Stravy." />
   <title>Dumbbell Counter</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#127947;</text></svg>" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icon.svg" />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
@@ -45,6 +47,30 @@
         <button class="rpe-btn rpe-10" data-rpe="10"><span class="rpe-num">10</span><span class="rpe-tag">Max</span></button>
       </div>
       <button class="rpe-skip">Preskočiť</button>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════════════════════════
+       CALIBRATION OVERLAY — measures this person's own range of motion, once
+       per exercise per profile, before the first set
+  ═══════════════════════════════════════════════════════════════════════════ -->
+  <div id="calib-overlay" class="rpe-overlay" aria-modal="true" role="dialog"
+       aria-labelledby="calib-title" aria-describedby="calib-sub">
+    <div class="rpe-box calib-box">
+      <div class="rpe-title" id="calib-title">Ukáž mi svoj rozsah</div>
+      <div class="rpe-sub" id="calib-sub">Sprav 2&ndash;3 pomalé opakovania. Nič sa teraz nezapočítava &mdash;
+        meriam, ako ďaleko sa naozaj pohneš, aby ti appka počítala podľa teba a nie podľa priemeru.</div>
+      <div class="calib-live">
+        <div class="calib-range" id="calib-range">&mdash;</div>
+        <div class="calib-meta"  id="calib-reps">zatiaľ 0 opakovaní</div>
+      </div>
+      <div class="calib-bar" aria-hidden="true"><div class="calib-bar-fill" id="calib-bar-fill"></div></div>
+      <p class="calib-status" id="calib-status" role="status" aria-live="polite">Postav sa do záberu&hellip;</p>
+      <div class="calib-actions">
+        <button class="btn btn-primary" id="btn-calib-accept" disabled>Použiť tento rozsah</button>
+        <button class="rpe-skip" id="btn-calib-skip">Preskočiť &mdash; použi predvolené hodnoty</button>
+      </div>
     </div>
   </div>
 
@@ -92,6 +118,11 @@
           <select id="exercise-select" aria-label="Cvik"></select>
           <div class="tips-box" id="exercise-tips"></div>
           <div class="camera-hint camera-hint-setup" id="setup-camera-hint"></div>
+          <div class="calib-row">
+            <span class="calib-row-status" id="calib-row-status" role="status" aria-live="polite"></span>
+            <button class="btn-link" id="btn-calibrate">Kalibrovať</button>
+            <button class="btn-link" id="btn-calib-clear" hidden>Zmazať kalibráciu</button>
+          </div>
         </div>
 
         <div class="card">
@@ -268,6 +299,8 @@
           <canvas id="pose-canvas" aria-hidden="true"></canvas>
           <div class="angle-badge" id="angle-display" aria-hidden="true">--&deg;</div>
           <div class="quality-badge none" id="quality-badge" role="status" aria-live="polite">&#9679; Bez signálu</div>
+          <button class="btn-camera-flip" id="btn-camera-flip" type="button"
+                  aria-label="Prepnúť prednú a zadnú kameru" title="Predná / zadná kamera">&#128260;&#128247;</button>
           <div class="flash-overlay" id="flash-overlay" aria-hidden="true"></div>
         </div>
 
@@ -403,6 +436,9 @@
         <button class="btn btn-ghost" id="btn-rest-extend">+30s</button>
         <button class="btn btn-primary" id="btn-skip-rest">Preskočiť pauzu &#9654;</button>
       </div>
+      <!-- The rest screen had no exit at all: during a 3-minute rest the only
+           ways out were finishing the workout or closing the tab. -->
+      <button class="btn-link rest-end-link" id="btn-rest-end">Ukončiť tréning a uložiť</button>
     </div>
   </section>
 
