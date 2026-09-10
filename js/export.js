@@ -268,12 +268,22 @@ function buildTcx(entry) {
     : [{ exerciseName: 'Workout', totalReps: 0, setData: [{ duration: total }] }];
   const laps = lapSource.map(ex => {
     const secs = (ex.setData || []).reduce((s, d) => s + (d.duration || 0), 0) || 1;
+    // A Lap with no Track is legal by the schema and rejected in practice by a
+    // good share of importers, which treat a trackless lap as an empty one.
+    // Two bare Trackpoints — start and end — are enough to keep them happy
+    // without inventing distance or heart rate we never measured. Element order
+    // is fixed by the schema: Track sits after TriggerMethod, before Notes.
+    const track = `      <Track>
+        <Trackpoint><Time>${iso(cursor)}</Time></Trackpoint>
+        <Trackpoint><Time>${iso(cursor + secs * 1000)}</Time></Trackpoint>
+      </Track>`;
     const lap  = `    <Lap StartTime="${iso(cursor)}">
       <TotalTimeSeconds>${secs}</TotalTimeSeconds>
       <DistanceMeters>0</DistanceMeters>
       <Calories>0</Calories>
       <Intensity>Active</Intensity>
       <TriggerMethod>Manual</TriggerMethod>
+${track}
       <Notes>${esc(ex.exerciseName)} — ${ex.totalReps} reps</Notes>
     </Lap>`;
     cursor += secs * 1000;
@@ -302,7 +312,22 @@ ${laps}
 // something that cannot work.
 
 class StravaClient {
-  constructor(cfg) { this.cfg = cfg || {}; this.KEY = 'dc_strava_tokens_v1'; }
+  constructor(cfg) {
+    this.cfg       = cfg || {};
+    this.KEY       = 'dc_strava_tokens_v1';
+    this.STATE_KEY = 'dc_strava_state';
+  }
+
+  // OAuth `state`. Without it the page swaps ANY ?code= it is handed for
+  // tokens, so a link crafted by someone else can bind this browser to their
+  // Strava account and every later upload lands in a stranger's feed.
+  _newState() {
+    const bytes = new Uint8Array(16);
+    (globalThis.crypto?.getRandomValues
+      ? globalThis.crypto.getRandomValues(bytes)
+      : bytes.forEach((_, i) => bytes[i] = Math.floor(Math.random() * 256)));
+    return [...bytes].map(b => b.toString(16).padStart(2, '0')).join('');
+  }
 
   get configured() { return !!(this.cfg.clientId && this.cfg.proxyUrl); }
 
@@ -314,9 +339,12 @@ class StravaClient {
   // Sends the user to Strava. They come back to this page with ?code=…
   beginAuth() {
     const redirect = location.origin + location.pathname;
+    const state    = this._newState();
+    try { sessionStorage.setItem(this.STATE_KEY, state); } catch (_) {}
     const url = 'https://www.strava.com/oauth/authorize'
       + `?client_id=${encodeURIComponent(this.cfg.clientId)}`
       + `&redirect_uri=${encodeURIComponent(redirect)}`
+      + `&state=${encodeURIComponent(state)}`
       + '&response_type=code&approval_prompt=auto&scope=activity:write';
     location.href = url;
   }
@@ -326,8 +354,15 @@ class StravaClient {
     const params = new URLSearchParams(location.search);
     const code   = params.get('code');
     if (!code || !this.configured) return false;
+    let expected = null;
+    try { expected = sessionStorage.getItem(this.STATE_KEY); } catch (_) {}
     // Strip the code from the URL so a refresh can't replay it
     history.replaceState({}, '', location.origin + location.pathname);
+    try { sessionStorage.removeItem(this.STATE_KEY); } catch (_) {}
+    // Only finish a flow this tab actually started.
+    if (!expected || params.get('state') !== expected) {
+      throw new Error('Strava: neplatný stav autorizácie — spusti pripojenie znova');
+    }
     const res = await fetch(this.cfg.proxyUrl.replace(/\/$/, '') + '/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

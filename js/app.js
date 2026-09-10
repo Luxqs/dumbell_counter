@@ -24,6 +24,7 @@ class App {
     this.wpm           = new WorkoutPlanManager();
     this.history       = new WorkoutHistory();
     this.weightMemory  = new WeightMemory();
+    this.calibration   = new CalibrationStore();
     this.strava        = new StravaClient(typeof STRAVA_CONFIG !== 'undefined' ? STRAVA_CONFIG : null);
 
     // The workout that was just saved, kept so the export buttons have
@@ -45,6 +46,14 @@ class App {
     this.stream      = null;
     this._processing    = false; // frame-drop guard
     this._setCompleting = false; // prevents _completeSet() double-call
+
+    // Frame-rate measurement. The counting engine is frame-rate independent by
+    // construction now, but below roughly 12 fps there are simply not enough
+    // samples of a 2 s rep to see it properly, so the app measures itself and
+    // says so instead of quietly under-counting.
+    this._frameSamples   = [];
+    this._fps            = 0;
+    this._modelDowngraded = false;
 
     // Rest timer
     this.restTimer     = null;
@@ -70,6 +79,12 @@ class App {
     // Wake lock
     this._wakeLock = null;
 
+    // Calibration — measuring this person's own range instead of assuming one.
+    this._calibrating     = false;
+    this._calibRun        = null;
+    this._forceCalibrate  = false;   // set by the setup screen's "Kalibrovať"
+    this._calibStartedAt  = 0;
+
     // Flash timeout ref
     this._flashTimeout = null;
 
@@ -85,6 +100,7 @@ class App {
     this._bindWorkout();
     this._bindProfileModal();
     this._bindRPEOverlay();
+    this._bindCalibration();
     this._init();
   }
 
@@ -128,6 +144,9 @@ class App {
       presetSelect:          $('preset-select'),
       btnDeletePreset:       $('btn-delete-preset'),
       exerciseTips:          $('exercise-tips'),
+      calibRowStatus:        $('calib-row-status'),
+      btnCalibrate:          $('btn-calibrate'),
+      btnCalibClear:         $('btn-calib-clear'),
       btnStart:              $('btn-start'),
       btnAddToPlan:          $('btn-add-to-plan'),
       planList:              $('plan-list'),
@@ -164,6 +183,7 @@ class App {
       btnNext:          $('btn-next-set'),
       btnBack:          $('btn-back'),
       flashOverlay:     $('flash-overlay'),
+      btnCameraFlip:    $('btn-camera-flip'),
       btnAudio:         $('btn-audio-toggle'),
       totalTimer:       $('workout-total-timer'),
       setTimer:         $('workout-set-timer'),
@@ -193,6 +213,7 @@ class App {
       nextExercise: $('rest-next-exercise'),
       btnSkip:      $('btn-skip-rest'),
       btnExtend:    $('btn-rest-extend'),
+      btnEnd:       $('btn-rest-end'),
     };
     this.complete = {
       exerciseName:    $('complete-exercise'),
@@ -216,6 +237,15 @@ class App {
       list:      $('history-list'),
       btnBack:   $('btn-history-back'),
       btnExport: $('btn-export-history'),
+    };
+    this.calib = {
+      overlay:   $('calib-overlay'),
+      range:     $('calib-range'),
+      reps:      $('calib-reps'),
+      barFill:   $('calib-bar-fill'),
+      status:    $('calib-status'),
+      btnAccept: $('btn-calib-accept'),
+      btnSkip:   $('btn-calib-skip'),
     };
     this.rpeOverlay       = $('rpe-overlay');
     this.loadingMsg       = $('loading-msg');
@@ -304,7 +334,33 @@ class App {
     // Where to put the phone is the first thing that goes wrong for a new user,
     // and until now it was only shown once the workout had already started.
     if (this.setup.setupCameraHint) this.setup.setupCameraHint.textContent = ex?.cameraHint || '';
+    this._updateCalibRow();
     this._updateSingleSummary();
+  }
+
+  // Says, on the setup screen, whether this exercise counts by this person's own
+  // measured range or by the config guess — and lets them change that answer.
+  _updateCalibRow() {
+    const s  = this.setup;
+    if (!s.calibRowStatus) return;
+    const id = s.exerciseSelect.value;
+    const ex = EXERCISES.find(e => e.id === id);
+    const c  = id ? this.calibration.get(id) : null;
+    const e  = id ? this.calibration.entry(id) : null;
+    if (c) {
+      const lo = Math.min(c.rest, c.peak), hi = Math.max(c.rest, c.peak);
+      s.calibRowStatus.textContent = `📐 Kalibrované na tvoj rozsah ${lo}°–${hi}°`;
+      s.calibRowStatus.classList.add('set');
+    } else if (e && e.skipped) {
+      s.calibRowStatus.textContent = '📐 Bez kalibrácie — počíta sa podľa predvolených hodnôt';
+      s.calibRowStatus.classList.remove('set');
+    } else {
+      s.calibRowStatus.textContent = '📐 Nekalibrované — appka sa spýta pred prvou sériou';
+      s.calibRowStatus.classList.remove('set');
+    }
+    if (s.btnCalibrate)  s.btnCalibrate.textContent = c ? 'Prekalibrovať' : 'Kalibrovať pri štarte';
+    if (s.btnCalibClear) s.btnCalibClear.hidden     = !e;
+    if (s.btnCalibrate)  s.btnCalibrate.disabled    = !ex;
   }
 
   // Plain-language recap under the Start button, so the numbers above are never
@@ -333,7 +389,10 @@ class App {
                    + `${sets} sérií · asi ${Math.max(1, Math.round(secs / 60))} min`;
   }
 
-  _renderPlanList() {
+  // `openIdx` is the row to leave expanded after the re-render. Reordering or
+  // removing a row rebuilds the whole list, which used to slam shut the row the
+  // user was in the middle of arranging.
+  _renderPlanList(openIdx = null) {
     const list = this.setup.planList;
     list.innerHTML = '';
 
@@ -425,16 +484,26 @@ class App {
           btn.classList.toggle('open', open);
         } else if (action === 'up' && idx > 0) {
           [this.workoutPlan[idx], this.workoutPlan[idx - 1]] = [this.workoutPlan[idx - 1], this.workoutPlan[idx]];
-          this._renderPlanList();
+          this._renderPlanList(idx - 1);
         } else if (action === 'down' && idx < this.workoutPlan.length - 1) {
           [this.workoutPlan[idx], this.workoutPlan[idx + 1]] = [this.workoutPlan[idx + 1], this.workoutPlan[idx]];
-          this._renderPlanList();
+          this._renderPlanList(idx + 1);
         } else if (action === 'remove') {
           this.workoutPlan.splice(idx, 1);
           this._renderPlanList();
         }
       });
     });
+
+    if (openIdx !== null && openIdx >= 0 && openIdx < this.workoutPlan.length) {
+      const panel = list.querySelector(`#plan-edit-${openIdx}`);
+      const head  = list.querySelector(`.plan-item-head[data-idx="${openIdx}"]`);
+      if (panel && head) {
+        panel.hidden = false;
+        head.setAttribute('aria-expanded', 'true');
+        head.classList.add('open');
+      }
+    }
 
     this.setup.btnStartPlan.disabled = false;
     this._updatePlanSummary();
@@ -543,6 +612,7 @@ class App {
     this.wpm.setNamespace(ns);
     this.history.setNamespace(ns);
     this.weightMemory.setNamespace(ns);
+    this.calibration.setNamespace(ns);
     this.profileIndicator.textContent = active ? `👤 ${active}` : '';
     this._populatePresets();
     this._populatePlanSelect();
@@ -588,10 +658,132 @@ class App {
     this.rpeOverlay.classList.remove('active');
     if (this._rpeReturnFocus?.isConnected) this._rpeReturnFocus.focus();
     this._rpeReturnFocus = null;
+    // The overlay is only ever an answer to a set that is being completed right
+    // now. Anything else — a stray Escape once the workout has been left — must
+    // close it and stop, not drive the state machine from leftover state and
+    // start a rest for a workout that is no longer running.
+    if (!this._setCompleting) return;
     if (this.currentExerciseSetData.length > 0) {
       this.currentExerciseSetData[this.currentExerciseSetData.length - 1].rpe = rpe;
     }
     this._proceedAfterSet();
+  }
+
+  // ── Calibration ──────────────────────────────────────────────────────────
+
+  _bindCalibration() {
+    const c = this.calib;
+    if (!c.overlay) return;
+    c.btnAccept?.addEventListener('click', () => this._finishCalibration(true));
+    c.btnSkip?.addEventListener('click',   () => this._finishCalibration(false));
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape' || !this._calibrating) return;
+      e.preventDefault();
+      this._finishCalibration(false);
+    });
+  }
+
+  // Offered once per exercise per profile, before the first set. A decline is
+  // recorded too, so nobody is asked the same question every session.
+  _maybeStartCalibration() {
+    const id = this.exerciseId;
+    if (!this.calib?.overlay) return;
+    if (!EXERCISES.some(e => e.id === id)) return;
+    if (this.calibration.entry(id) && !this._forceCalibrate) return;
+    this._forceCalibrate  = false;
+    this._calibrating     = true;
+    this._calibStartedAt  = Date.now();
+    this._calibRun        = new CalibrationRun(id);
+    this._framingIssue    = null;
+    this.calib.btnAccept.disabled = true;
+    this._updateCalibrationUI(this._calibRun.status());
+    this.calib.overlay.classList.add('active');
+    this._calibReturnFocus = document.activeElement;
+    this.calib.btnSkip?.focus();
+  }
+
+  _updateCalibrationUI(st) {
+    const c = this.calib;
+    if (!c.overlay) return;
+    c.range.textContent = st.min === null
+      ? '—'
+      : `${Math.min(st.min, st.max)}° – ${Math.max(st.min, st.max)}°`;
+    const word = st.reps === 1 ? 'opakovanie' : st.reps < 5 ? 'opakovania' : 'opakovaní';
+    c.reps.textContent = st.span
+      ? `rozsah ${st.span}° · ${st.reps} ${word}`
+      : 'zatiaľ 0 opakovaní';
+
+    // Two things have to be true, so the bar shows both halves rather than
+    // filling up on range alone and then refusing to let you continue.
+    const spanPart = Math.min(1, st.span      / CALIB_MIN_SPAN_DEG);
+    const repsPart = Math.min(1, st.reversals / CALIB_MIN_REVERSALS);
+    c.barFill.style.width = `${Math.round((spanPart * 0.5 + repsPart * 0.5) * 100)}%`;
+
+    let text = '', cls = '';
+    if (!st.visible) {
+      text = this._framingIssue?.message
+          || 'Nevidím ťa — postav sa tak, aby bolo v zábere celé telo';
+      cls  = 'warn';
+    } else if (this._framingIssue) {
+      text = this._framingIssue.message;
+      cls  = 'warn';
+    } else if (!st.ready) {
+      text = st.span < CALIB_MIN_SPAN_DEG
+        ? 'Sprav celé opakovanie — od úplného vystretia po plné stiahnutie'
+        : 'Dobre. Ešte aspoň jedno opakovanie, nech viem, že to nebola náhoda.';
+    } else {
+      text = 'Rozsah zachytený ✓ Odteraz sa bude počítať podľa teba.';
+      cls  = 'ready';
+    }
+    c.status.textContent = text;
+    c.status.className   = 'calib-status' + (cls ? ' ' + cls : '');
+    c.btnAccept.disabled = !st.ready;
+  }
+
+  _finishCalibration(accept) {
+    if (!this._calibrating) return;
+    const id  = this.exerciseId;
+    const res = accept ? this._calibRun?.result() : null;
+    if (res) {
+      this.calibration.set(id, res);
+      this.counter = new RepCounter(id, this.calibration.get(id));
+      this._toast(`Kalibrované — opakovanie sa počíta od ${this.counter.counting.peakThreshold}°`);
+    } else {
+      // Declining must never wipe a calibration that already exists: this path
+      // is also reached from the setup screen's "Prekalibrovať".
+      const existing = this.calibration.get(id);
+      if (!existing) this.calibration.skip(id);
+      this.counter = new RepCounter(id, existing);
+    }
+    this._calibrating = false;
+    this._calibRun    = null;
+    this.calib.overlay.classList.remove('active');
+    if (this._calibReturnFocus?.isConnected) this._calibReturnFocus.focus();
+    this._calibReturnFocus = null;
+    // Calibration is neither part of the set nor part of the workout, so it is
+    // subtracted from both clocks rather than inflating the session.
+    this.workoutStartTime += Date.now() - this._calibStartedAt;
+    this.setStartTime      = Date.now();
+    this.detector.resetSubject();
+    this._frameSamples = [];
+    this._lastFrameAt  = 0;
+    this._framingIssue = null;
+    this._updateCalibRow();
+    this._updateWorkoutUI();
+  }
+
+  // Before the first rep of a set the most useful sentence is usually about the
+  // shot, not the rep: every exercise states the view it needs and nothing used
+  // to check it, so a turned torso skewed every measured angle and the app
+  // simply counted less and told the user to go higher. Once they are actually
+  // moving, the line belongs to the rep again.
+  _withFramingAdvice(result) {
+    if (!this.counter || this.counter.reps > 0) return result;
+    if (result.counted || (result.progress ?? 0) >= 0.12) return result;
+    const slow = this._fps >= 1 && this._fps < FPS_LOW_THRESHOLD;
+    const msg  = this._framingIssue?.message
+      || (slow ? `Len ${Math.round(this._fps)} fps — zavri iné aplikácie, inak sa opakovania strácajú` : null);
+    return msg ? { ...result, coach: msg, coachTone: 'warn' } : result;
   }
 
   // ── Bind Events: Setup ───────────────────────────────────────────────────
@@ -640,9 +832,13 @@ class App {
 
     s.presetSelect.addEventListener('change', () => {
       const name   = s.presetSelect.value;
-      const preset = this.wm.get(name);
+      // Sanitised, exactly like a saved plan: a preset naming an exercise this
+      // build no longer has used to blank the picker and start a workout whose
+      // counter had no exercise at all.
+      const preset = name ? this.wm.getSanitised(name) : null;
       // Sync delete button: disabled when placeholder ("") is selected
       s.btnDeletePreset.disabled = !name;
+      if (name && !preset) { this._toast('Predvoľba je poškodená alebo cvik už neexistuje'); return; }
       if (!preset) return;
       s.exerciseSelect.value = preset.exerciseId;
       this.targetSets        = preset.sets;
@@ -732,8 +928,28 @@ class App {
       this._toast('Tréning zmazaný');
     });
 
-    s.btnStartPlan.addEventListener('click', () => { if (this.workoutPlan.length) this._startWorkout(true); });
-    s.btnStart    .addEventListener('click', () => this._startWorkout(false));
+    s.btnStartPlan.addEventListener('click', () => {
+      if (!this.workoutPlan.length) return;
+      this.audio.prime();
+      this._startWorkout(true);
+    });
+    s.btnStart.addEventListener('click', () => { this.audio.prime(); this._startWorkout(false); });
+
+    if (s.btnCalibrate) {
+      s.btnCalibrate.addEventListener('click', () => {
+        this._forceCalibrate = true;
+        this._toast('Kalibrácia sa spustí po štarte cviku');
+      });
+    }
+    if (s.btnCalibClear) {
+      s.btnCalibClear.addEventListener('click', () => {
+        const id = s.exerciseSelect.value;
+        if (!id) return;
+        this.calibration.clear(id);
+        this._updateCalibRow();
+        this._toast('Kalibrácia zmazaná');
+      });
+    }
 
     if (s.btnHistory) s.btnHistory.addEventListener('click', () => this._showHistoryScreen());
   }
@@ -762,41 +978,57 @@ class App {
     const w = this.workout;
 
     w.btnBack.addEventListener('click', () => {
-      if (confirm('Ukončiť tréning a vrátiť sa na nastavenia?')) this._goSetup();
+      // Leaving used to discard everything already done — four finished
+      // exercises of a five-exercise plan reached the history as nothing at
+      // all — and the question did not warn about it either way.
+      const done = this._completedSetCount();
+      const word = done === 1 ? 'séria sa uloží' : done < 5 ? 'série sa uložia' : 'sérií sa uloží';
+      const msg  = done
+        ? `Ukončiť tréning? Odcvičené ${done} ${word} do histórie.`
+        : 'Ukončiť tréning a vrátiť sa na nastavenia? Nič nie je odcvičené, takže sa nič neuloží.';
+      if (!confirm(msg)) return;
+      const saved = this._saveAbandonedSession();
+      this._goSetup();
+      if (saved) this._toast('Uložené do histórie');
     });
 
     w.btnPause.addEventListener('click', () => {
       if (this.isPaused) {
         this.isPaused = false;
         w.btnPause.textContent = '⏸ Pauza';
+        this.audio.prime();          // resuming is a gesture; keep the beeps alive
         this._acquireWakeLock();
-        this._loop();
+        this._startLoop();
       } else {
         this.isPaused = true;
         w.btnPause.textContent = '▶ Pokračovať';
-        cancelAnimationFrame(this.animationId);
+        this._stopLoop();
         this._releaseWakeLock();
       }
     });
 
     // FIX: guard prevents double-call when auto-complete 400ms timeout is in flight
     w.btnNext.addEventListener('click', () => {
-      if (this._setCompleting) return;
+      if (this._setCompleting || this._calibrating) return;
       this._completeSet();
     });
 
     w.btnAudio.addEventListener('click', () => this._setAudioButton(this.audio.toggle()));
 
+    if (w.btnCameraFlip) {
+      w.btnCameraFlip.addEventListener('click', () => this._flipCamera());
+    }
+
     // Tap-to-count: manual rep fallback when camera is unreliable
     w.btnTapCount.addEventListener('click', () => {
-      if (!this.isRunning || this.isPaused || this._setCompleting) return;
+      if (!this.isRunning || this.isPaused || this._setCompleting || this._calibrating) return;
       const result = this.counter.manualRep();
       this._updateCountUI(result);
       this._flashRep();
       this.audio.playRep();
       if (result.reps >= this.targetReps) {
         this.isRunning = false;
-        cancelAnimationFrame(this.animationId);
+        this._stopLoop();
         clearTimeout(this._pendingCompleteTimeout);
         this._pendingCompleteTimeout = setTimeout(() => this._completeSet(), 400);
       }
@@ -805,10 +1037,29 @@ class App {
     // Undo last rep — removes one miscount, disables itself at 0
     if (w.btnUndoRep) {
       w.btnUndoRep.addEventListener('click', () => {
-        if (!this.isRunning || this.isPaused || this._setCompleting) return;
-        if (this.counter.reps <= 0) return;
+        if (this._setCompleting || this._calibrating) return;
+        if (!this.counter || this.counter.reps <= 0) return;
+        // The rep worth taking back most often is the phantom that just ENDED
+        // the set — and that was the one rep undo could not reach, because
+        // hitting the target stops the loop and clears isRunning before the
+        // button can be pressed. Inside that 400 ms window undo now cancels the
+        // pending completion and puts the set back on its feet.
+        const ending = this._pendingCompleteTimeout != null;
+        if (ending) {
+          clearTimeout(this._pendingCompleteTimeout);
+          this._pendingCompleteTimeout = null;
+        } else if (!this.isRunning || this.isPaused) {
+          return;
+        }
         const result = this.counter.undoRep();
         this._updateCountUI(result);
+        if (ending) {
+          this.isRunning   = true;
+          this.isPaused    = false;
+          this._processing = false;
+          this._startLoop();
+          this._toast('Séria pokračuje');
+        }
       });
     }
 
@@ -821,7 +1072,10 @@ class App {
       const val = Math.min(200, Math.max(0, parseFloat(w.weightInput.value) || 0));
       w.weightInput.value   = val || '';
       this.currentSetWeight = val;
-      if (val > 0) this.weightMemory.set(this.exerciseId, val);
+      // 0 is a real answer — "today, bodyweight". Refusing to store it meant the
+      // app kept pre-filling last month's 20 kg for an exercise you had since
+      // dropped the dumbbells for.
+      this.weightMemory.set(this.exerciseId, val);
     });
 
     // Weight stepper buttons — ±2.5 kg per tap, no keyboard needed mid-exercise
@@ -831,7 +1085,7 @@ class App {
         const next = Math.max(0, Math.round((cur - 2.5) * 10) / 10);
         w.weightInput.value = next || '';
         this.currentSetWeight = next;
-        if (next > 0) this.weightMemory.set(this.exerciseId, next);
+        this.weightMemory.set(this.exerciseId, next);
       });
     }
     if (w.btnWeightPlus) {
@@ -846,13 +1100,14 @@ class App {
       });
     }
 
-    this.rest.btnSkip.addEventListener('click', () => this._endRest());
+    this.rest.btnSkip.addEventListener('click', () => { this.audio.prime(); this._endRest(); });
 
     // Extend rest by 30 s — also grow restTotal so the ring arc stays consistent
     if (this.rest.btnExtend) {
       this.rest.btnExtend.addEventListener('click', () => {
         this.restRemaining = Math.min(this.restRemaining + 30, 300);
         this.restTotal     = Math.max(this.restTotal, this.restRemaining);
+        this._restEndsAt   = Date.now() + this.restRemaining * 1000;
         this._renderCountdown();
         this._updateRestRing(this.restRemaining, this.restTotal);
       });
@@ -871,6 +1126,19 @@ class App {
     this.complete.btnAgain.addEventListener('click', () => this._startWorkout(this.isRunningPlan));
     this.complete.btnHome .addEventListener('click', () => this._goSetup());
 
+    if (this.rest.btnEnd) {
+      this.rest.btnEnd.addEventListener('click', () => {
+        const done = this._completedSetCount();
+        const word = done === 1 ? 'séria sa uloží' : done < 5 ? 'série sa uložia' : 'sérií sa uloží';
+        if (!confirm(done
+          ? `Ukončiť tréning? Odcvičené ${done} ${word} do histórie.`
+          : 'Ukončiť tréning? Nič nie je odcvičené, takže sa nič neuloží.')) return;
+        const saved = this._saveAbandonedSession();
+        this._goSetup();
+        if (saved) this._toast('Uložené do histórie');
+      });
+    }
+
     if (this.historyScreen.btnBack) {
       this.historyScreen.btnBack.addEventListener('click', () => this._showScreen('setup'));
     }
@@ -881,10 +1149,23 @@ class App {
 
     // Re-acquire wake lock if page becomes visible (wake lock is auto-released on hide)
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible' && this.isRunning && !this.isPaused) {
-        this._acquireWakeLock();
-      }
+      if (document.visibilityState !== 'visible') return;
+      if (this.isRunning && !this.isPaused) this._acquireWakeLock();
+      // Coming back from the background: redraw the countdown from the clock
+      // immediately rather than after the next tick, and let it end the rest if
+      // it already ran out while the tab was suspended.
+      if (this.restTimer) this._tickRest();
+      // Frame timings measured across a suspended tab are meaningless.
+      this._frameSamples = [];
+      this._lastFrameAt  = 0;
     });
+
+    // The camera wrapper is pinned to the aspect ratio the camera actually
+    // produced. Rotating the phone re-lays-out the page, and without this the
+    // skeleton drifts off the body for the rest of the set.
+    const resync = () => this._syncCameraAspect();
+    window.addEventListener('resize', resync);
+    window.addEventListener('orientationchange', resync);
   }
 
   // The glyph alone carried the on/off state, which told a screen-reader user
@@ -930,6 +1211,7 @@ class App {
   async _init() {
     this._setMode('single');
     this._setAudioButton(this.audio.enabled);
+    this._setCameraFacing(this._cameraFacing());
     // If we came back from Strava's consent page, swap the code for tokens
     // before doing anything else, so the URL is clean either way.
     try { await this.strava.completeAuth(); } catch (err) { console.warn(err.message); }
@@ -941,6 +1223,18 @@ class App {
     this._applyActiveProfile();
     if (!this.profiles.getActive()) this._showProfileModal();
     this._showScreen('setup');
+    this._registerServiceWorker();
+  }
+
+  // Offline. A gym with one bar of signal must not be able to stop the app from
+  // starting: index.html loads TensorFlow.js and the pose model from a CDN, so
+  // without a worker holding a copy the whole thing is dead exactly where it is
+  // used. Fired last and never awaited — a failure here cannot delay the boot.
+  _registerServiceWorker() {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+    if (location.protocol === 'file:') return;   // registration is refused there anyway
+    navigator.serviceWorker.register('sw.js')
+      .catch(err => console.warn('Service worker registration failed:', err.message));
   }
 
   // ── Start workout ────────────────────────────────────────────────────────
@@ -978,9 +1272,16 @@ class App {
     this.currentSet             = 1;
     this._isExerciseTransition  = false;
     this._setCompleting         = false;
+    // A new session must not inherit the previous one's frame timings, or the
+    // signal badge opens showing an fps the current camera never produced.
+    this._frameSamples          = [];
+    this._fps                   = 0;
+    this._lastFrameAt           = 0;
+    this._sessionSaved          = false;
     this.currentExerciseSetData = [];
     this.currentSetWeight       = 0;
-    this.counter                = new RepCounter(this.exerciseId);
+    this.counter                = new RepCounter(this.exerciseId,
+                                                  this.calibration.get(this.exerciseId));
 
     if (this.workout.weightInput) this.workout.weightInput.value = '';
 
@@ -1002,19 +1303,13 @@ class App {
         await this.detector.init(msg => { this.loadingMsg.textContent = msg; });
       }
       this.loadingMsg.textContent = 'Spúšťam kameru…';
-      this.stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
-        audio: false,
-      });
-      const video = this.workout.video;
-      video.srcObject = this.stream;
-      await this._waitForVideoMetadata(video);
-      await video.play();
-      // The wrapper is hard-coded 4/3 in CSS while the camera only gets 640x480
-      // as a hint. If it hands back 16:9, object-fit:cover crops the video but
-      // the canvas stretches — the skeleton drifts off the body. Pin the
-      // wrapper to whatever aspect the camera actually produced.
-      this._syncCameraAspect();
+      this.stream = await navigator.mediaDevices.getUserMedia(this._cameraConstraints());
+      // A phone call, another app grabbing the camera, or a revoked permission
+      // ends the track; and the wrapper has to be pinned to whatever aspect the
+      // camera actually produced, or object-fit:cover crops the video while the
+      // canvas stretches and the skeleton drifts off the body. Both live in
+      // _attachStream, which the camera flip reuses.
+      await this._attachStream();
     } catch (err) {
       // err.message for a denied permission is "Permission denied" — true and
       // useless. Say what went wrong and what fixes it.
@@ -1036,9 +1331,98 @@ class App {
     this.isRunning   = true;
     this.isPaused    = false;
     this._processing = false;
+    this.detector.resetSubject();
     this.workout.btnPause.textContent = '⏸ Pauza';
     await this._acquireWakeLock();
-    this._loop();
+    this._maybeStartCalibration();
+    this._startLoop();
+  }
+
+  // Which camera to ask for. Hard-coding the front one meant the better lens on
+  // every phone went unused, and with the phone propped up two or three metres
+  // away the body is a small patch of a 640x480 frame. 720p is a hint, not a
+  // demand — the browser hands back whatever it can, and the fps meter plus the
+  // Thunder→Lightning downgrade already handle a device that cannot keep up.
+  // NOT VERIFIED ON REAL HARDWARE: whether 720p measurably improves keypoints is
+  // worth measuring on a phone before treating it as settled.
+  _cameraConstraints() {
+    return {
+      video: {
+        facingMode: this._cameraFacing(),
+        width:  { ideal: 1280 },
+        height: { ideal: 720 },
+      },
+      audio: false,
+    };
+  }
+
+  _cameraFacing() {
+    try { return localStorage.getItem('dc_camera_facing') === 'environment' ? 'environment' : 'user'; }
+    catch { return 'user'; }
+  }
+
+  _setCameraFacing(f) {
+    try { localStorage.setItem('dc_camera_facing', f); } catch (_) {}
+    this.workout.cameraWrapper?.classList.toggle('rear', f === 'environment');
+  }
+
+  // Swaps the camera without tearing the session down. On failure the previous
+  // choice is restored and re-opened, so a phone with only one camera cannot
+  // strand the user on a black frame mid-set.
+  async _flipCamera() {
+    if (this._flippingCamera) return;
+    const btn = this.workout.btnCameraFlip;
+    const was = this._cameraFacing();
+    const now = was === 'user' ? 'environment' : 'user';
+    this._flippingCamera = true;
+    if (btn) btn.disabled = true;
+    this._stopCamera();
+    try {
+      this._setCameraFacing(now);
+      this.stream = await navigator.mediaDevices.getUserMedia(this._cameraConstraints());
+      await this._attachStream();
+      this._toast(now === 'environment' ? 'Zadná kamera' : 'Predná kamera');
+    } catch (err) {
+      this._setCameraFacing(was);
+      try {
+        this.stream = await navigator.mediaDevices.getUserMedia(this._cameraConstraints());
+        await this._attachStream();
+      } catch (_) { this.stream = null; }
+      this._toast('Druhá kamera nie je dostupná');
+    } finally {
+      this._flippingCamera = false;
+      if (btn) btn.disabled = false;
+      this.detector.resetSubject();
+      this._frameSamples = [];
+      this._lastFrameAt  = 0;
+    }
+  }
+
+  // Everything that has to happen once a stream exists, in one place, so
+  // starting a workout and flipping the camera cannot drift apart.
+  async _attachStream() {
+    const video = this.workout.video;
+    video.srcObject = this.stream;
+    await this._waitForVideoMetadata(video);
+    await video.play();
+    const tracks = this.stream.getVideoTracks?.() || [];
+    tracks.forEach(track => {
+      track.addEventListener?.('ended', () => {
+        // A track just as often dies DURING a rest — a phone call, another app
+        // taking the camera. The old guard returned silently in that case and
+        // the next set restarted the loop against a dead stream, where the
+        // only feedback was a toast after five failed frames.
+        if (!this.isRunning) {
+          this._toast('Kamera sa odpojila — po pauze počítaj ručne cez 👆 +1 opak.');
+          return;
+        }
+        this.isPaused = true;
+        this._stopLoop();
+        this.workout.btnPause.textContent = '▶ Pokračovať';
+        this._toast('Kamera sa odpojila — počítaj ručne cez 👆 +1 opak.');
+      });
+    });
+    this._syncCameraAspect();
   }
 
   // Waits until the camera reports real dimensions.
@@ -1074,15 +1458,38 @@ class App {
 
   // ── Detection loop ───────────────────────────────────────────────────────
 
-  _loop() {
-    if (!this.isRunning || this.isPaused) return;
-    this.animationId = requestAnimationFrame(() => this._tick());
+  // Every scheduled frame carries the generation it belongs to, and anything
+  // that stops or restarts the loop bumps that generation.
+  //
+  // Without it a pause landing while an inference was in flight produced TWO
+  // permanently concurrent chains: the resume scheduled one, and when the
+  // awaited detect() finally returned, the tick that had been suspended inside
+  // it scheduled another and overwrote this.animationId — so
+  // cancelAnimationFrame could never reach the first again. Measured: one
+  // pause+resume left two loops running for the rest of the set, and every
+  // further pause+resume added one more. On a phone already at 8-15 fps that
+  // is spent directly out of the frame budget the counter depends on.
+  _stopLoop() {
+    this._loopGen = (this._loopGen || 0) + 1;
+    cancelAnimationFrame(this.animationId);
+    this.animationId = null;
   }
 
-  async _tick() {
-    if (!this.isRunning || this.isPaused) return;
-    if (this._processing) { this._loop(); return; } // skip frame, prev inference still running
+  _startLoop() {
+    this._loopGen = (this._loopGen || 0) + 1;
+    this._loop(this._loopGen);
+  }
+
+  _loop(gen = this._loopGen) {
+    if (!this.isRunning || this.isPaused || gen !== this._loopGen) return;
+    this.animationId = requestAnimationFrame(() => this._tick(gen));
+  }
+
+  async _tick(gen = this._loopGen) {
+    if (!this.isRunning || this.isPaused || gen !== this._loopGen) return;
+    if (this._processing) { this._loop(gen); return; } // skip frame, prev inference still running
     this._processing = true;
+    this._sampleFrameRate();
 
     try {
       const pose = await this.detector.detect(this.workout.video);
@@ -1090,7 +1497,17 @@ class App {
                                  this.exerciseId, this._lastFormColor || '#ef4444');
 
       if (pose) {
-        const result = this.counter.update(pose, this.detector);
+        this._framingIssue = assessFraming(
+          pose, EXERCISES.find(e => e.id === this.exerciseId), this.detector);
+
+        if (this._calibrating) {
+          this._updateCalibrationUI(this._calibRun.update(pose, this.detector));
+          this._detectFailures = 0;
+          this._loop(gen);
+          return;
+        }
+
+        const result = this._withFramingAdvice(this.counter.update(pose, this.detector));
         this._updateCountUI(result);
 
         if (result.counted) {
@@ -1100,7 +1517,7 @@ class App {
             // Stop the loop immediately — prevents any more ticks during the 400ms delay
             this.isRunning   = false;
             this._processing = false;
-            cancelAnimationFrame(this.animationId);
+            this._stopLoop();
             clearTimeout(this._pendingCompleteTimeout);
             this._pendingCompleteTimeout = setTimeout(() => this._completeSet(), 400);
             return;
@@ -1108,6 +1525,7 @@ class App {
         }
       }
       this._detectFailures = 0;
+      await this._maybeDowngradeModel();
     } catch (err) {
       // A single bad frame — a lost WebGL context, a camera stall, a model
       // hiccup — must not end the session. Before this catch existed the
@@ -1122,7 +1540,48 @@ class App {
       this._processing = false;
     }
 
-    this._loop();
+    this._loop(gen);
+  }
+
+  // ── Frame rate ───────────────────────────────────────────────────────────
+
+  // Rolling average of the real interval between inference frames. This is the
+  // number that decides whether the session can be trusted: MoveNet Thunder
+  // over WebGL runs at 8-15 fps on a mid-range phone, and a 2 s rep sampled
+  // eight times is a different measurement problem from one sampled sixty.
+  _sampleFrameRate() {
+    const now = (typeof performance !== 'undefined' && performance.now)
+      ? performance.now() : Date.now();
+    if (this._lastFrameAt) {
+      const delta = now - this._lastFrameAt;
+      if (delta > 0 && delta < 2000) {
+        this._frameSamples.push(delta);
+        if (this._frameSamples.length > FPS_WINDOW) this._frameSamples.shift();
+      }
+    }
+    this._lastFrameAt = now;
+    if (this._frameSamples.length >= 5) {
+      const avg = this._frameSamples.reduce((a, b) => a + b, 0) / this._frameSamples.length;
+      this._fps = avg > 0 ? 1000 / avg : 0;
+    }
+  }
+
+  // One-way downgrade to the lighter model. A rougher skeleton at 25 fps beats
+  // a precise one at 9: joint accuracy costs a couple of degrees, while frame
+  // rate decides whether a rep is seen at all. Done once per session, never
+  // back, so the app cannot oscillate between models mid-set.
+  async _maybeDowngradeModel() {
+    if (this._modelDowngraded) return;
+    if (this._frameSamples.length < FPS_WINDOW) return;
+    if (this._fps === 0 || this._fps >= FPS_LOW_THRESHOLD) return;
+    if (this.detector.modelType !== 'thunder') return;
+    this._modelDowngraded = true;   // set first: the swap is awaited, and more
+                                    // frames run while it is in flight
+    const ok = await this.detector.switchModel('lightning');
+    if (ok) {
+      this._frameSamples = [];
+      this._toast('Pomalé zariadenie — prepínam na rýchlejší model detekcie');
+    }
   }
 
   // ── Timers ───────────────────────────────────────────────────────────────
@@ -1150,7 +1609,7 @@ class App {
     if (this._setCompleting) return;
     this._setCompleting = true;
 
-    cancelAnimationFrame(this.animationId);
+    this._stopLoop();
     this.isRunning = false;
 
     const setDuration = Math.round((Date.now() - this.setStartTime) / 1000);
@@ -1214,18 +1673,38 @@ class App {
 
     this._restEnding = false;
     if (totalSeconds <= 0) {
+      // Null it: `restTimer` is what visibilitychange tests before recomputing
+      // the countdown, and a cleared-but-still-truthy id would send it into
+      // _tickRest() with the PREVIOUS rest's deadline.
+      this.restTimer = null;
       clearTimeout(this._zeroRestTimeout);
       this._zeroRestTimeout = setTimeout(() => this._endRest(), 300);
       return;
     }
 
-    this.restTimer = setInterval(() => {
-      this.restRemaining--;
+    // Driven by a DEADLINE, not by counting down a variable once a second.
+    // Browsers throttle background intervals to about one tick a minute and iOS
+    // suspends them outright, so the old version stopped whenever the user
+    // switched apps to change the music and came back to a rest timer frozen
+    // where they left it. Recomputing from the clock means a throttled or
+    // suspended tab simply catches up, and the tick can run more often than
+    // once a second without the countdown drifting.
+    this._restEndsAt = Date.now() + totalSeconds * 1000;
+    this.restTimer   = setInterval(() => this._tickRest(), 250);
+  }
+
+  _tickRest() {
+    const left = Math.max(0, Math.ceil((this._restEndsAt - Date.now()) / 1000));
+    if (left !== this.restRemaining) {
+      this.restRemaining = left;
       this._renderCountdown();
-      this._updateRestRing(this.restRemaining, this.restTotal); // use instance var, not closure
-      if (this.restRemaining > 0 && this.restRemaining <= 3) this.audio.playCountdown();
-      if (this.restRemaining <= 0) this._endRest();
-    }, 1000);
+      this._updateRestRing(this.restRemaining, this.restTotal);
+      // Only beep on a fresh second, and never for seconds the tab slept
+      // through — coming back from the background must not fire three ticks at
+      // once.
+      if (left > 0 && left <= 3) this.audio.playCountdown();
+    }
+    if (left <= 0) this._endRest();
   }
 
   // A 180 s rest (the 5×5 template) used to render as the bare number "180"
@@ -1273,9 +1752,18 @@ class App {
       this.isRunning   = true;
       this.isPaused    = false;
       this._processing = false;
+      // The same reset the exercise change does. A rest is exactly when the
+      // lifter walks away and comes back, which moves the torso centre far
+      // enough for the subject lock to reject the first second and a half of
+      // the new set; and frame timings measured across the rest screen describe
+      // a loop that was not running.
+      this.detector.resetSubject();
+      this._frameSamples = [];
+      this._lastFrameAt  = 0;
+      if (!this._cameraAlive()) this._toast('Kamera je odpojená — počítaj ručne cez 👆 +1 opak.');
       this.workout.btnPause.textContent = '⏸ Pauza';
       this._acquireWakeLock();
-      this._loop();
+      this._startLoop();
     }
   }
 
@@ -1294,16 +1782,72 @@ class App {
     const nextWeight = this.weightMemory.get(this.exerciseId);
     this.currentSetWeight = nextWeight;
     if (this.workout.weightInput) this.workout.weightInput.value = nextWeight > 0 ? nextWeight : '';
-    this.counter = new RepCounter(this.exerciseId);
+    this.counter = new RepCounter(this.exerciseId, this.calibration.get(this.exerciseId));
 
     this._showScreen('workout');
     this._updateWorkoutUI();
     this.isRunning   = true;
     this.isPaused    = false;
     this._processing = false;
+    this.detector.resetSubject();
+    this._frameSamples = [];
+    this._lastFrameAt  = 0;
+    if (!this._cameraAlive()) this._toast('Kamera je odpojená — počítaj ručne cez 👆 +1 opak.');
     this.workout.btnPause.textContent = '⏸ Pauza';
     this._acquireWakeLock();
-    this._loop();
+    this._maybeStartCalibration();
+    this._startLoop();
+  }
+
+  // True while the stream still has a live video track. A track that has ended
+  // keeps handing the model the last frame it saw, which looks exactly like a
+  // lifter standing perfectly still.
+  _cameraAlive() {
+    const tracks = this.stream?.getVideoTracks?.() || [];
+    return tracks.length > 0 && tracks.some(t => t.readyState !== 'ended');
+  }
+
+  // Sets already completed in this session, across the whole plan.
+  _completedSetCount() {
+    const banked = this.isRunningPlan
+      ? this.planResults.reduce((n, r) => n + (r.setData?.length || 0), 0)
+      : 0;
+    return banked + this.currentExerciseSetData.length;
+  }
+
+  // Writes a session that was abandoned rather than finished, in exactly the
+  // shape _showComplete writes, so the history screen and both exporters treat
+  // it like any other. Returns the stored entry, or null when there was
+  // genuinely nothing to keep.
+  _saveAbandonedSession() {
+    if (this._sessionSaved) return null;
+    if (this._completedSetCount() === 0) return null;
+    if (this.isRunningPlan && this.currentExerciseSetData.length) this._recordPlanResult();
+    const totalSecs = Math.round((Date.now() - this.workoutStartTime) / 1000);
+    let entry;
+    if (this.isRunningPlan) {
+      entry = {
+        planName:      `${this._activePlanName || 'Tréning'} (nedokončený)`,
+        exercises:     [...this.planResults],
+        totalDuration: totalSecs,
+      };
+    } else {
+      const ex = EXERCISES.find(e => e.id === this.exerciseId);
+      entry = {
+        planName:  null,
+        exercises: [{
+          exerciseId:   this.exerciseId,
+          exerciseName: ex?.name || this.exerciseId,
+          sets:         this.currentExerciseSetData.length,
+          totalReps:    this.currentExerciseSetData.reduce((s, d) => s + d.reps, 0),
+          setData:      [...this.currentExerciseSetData],
+        }],
+        totalDuration: totalSecs,
+      };
+    }
+    this._sessionSaved     = true;
+    this._lastSessionEntry = this.history.add(entry);
+    return this._lastSessionEntry;
   }
 
   _recordPlanResult() {
@@ -1321,12 +1865,17 @@ class App {
       totalReps,
       setData:      [...this.currentExerciseSetData],
     });
+    // Banked. Leaving it in place would let it be counted, and recorded, a
+    // second time by anything that runs before _loadNextPlanExercise clears it.
+    this.currentExerciseSetData = [];
   }
 
   _showComplete() {
     this._stopTimers();
     this._stopCamera();
     this._releaseWakeLock();
+    // Claimed here so a later Späť/Domov cannot write the same session twice.
+    this._sessionSaved = true;
 
     const totalSecs = Math.round((Date.now() - this.workoutStartTime) / 1000);
 
@@ -1487,7 +2036,7 @@ class App {
   }
 
   _goSetup() {
-    cancelAnimationFrame(this.animationId);
+    this._stopLoop();
     clearInterval(this.restTimer);
     this.restTimer = null;
     clearTimeout(this._pendingCompleteTimeout);
@@ -1502,6 +2051,10 @@ class App {
     this._isExerciseTransition = false;
     this._processing        = false;
     this._setCompleting     = false;
+    this._calibrating       = false;
+    this._calibRun          = null;
+    this._framingIssue      = null;
+    this.calib?.overlay?.classList.remove('active');
     this.rpeOverlay.classList.remove('active');
     this._releaseWakeLock();
     this._stopCamera();
@@ -1557,23 +2110,43 @@ class App {
 
       const exerciseRows = exercises.map(ex => {
         const totalReps = ex.totalReps ?? (ex.setData?.reduce((s, d) => s + d.reps, 0) ?? 0);
-        const avgWeight = ex.setData?.length
-          ? ex.setData.reduce((s, d) => s + (d.weight || 0), 0) / ex.setData.length
+        const sets      = Array.isArray(ex.setData) ? ex.setData : [];
+        const avgWeight = sets.length
+          ? sets.reduce((s, d) => s + (d.weight || 0), 0) / sets.length
           : 0;
-        const rpeVals = (ex.setData || []).filter(d => d.rpe != null).map(d => d.rpe);
+        const rpeVals = sets.filter(d => d.rpe != null).map(d => d.rpe);
         const rpeStr  = rpeVals.length
           ? ` · RPE ${(rpeVals.reduce((a, b) => a + b, 0) / rpeVals.length).toFixed(1)}`
           : '';
-        return `
-          <div class="history-exercise-row">
+        const summary = `
             <div>
               <div class="history-exercise-name">${escapeHtml(ex.exerciseName)}</div>
               <div class="history-exercise-detail">${ex.sets} sérií${rpeStr}</div>
             </div>
             <span class="history-exercise-stats">
               ${totalReps} opak.${avgWeight > 0 ? `<br>${avgWeight.toFixed(1)}&nbsp;kg` : ''}
-            </span>
-          </div>`;
+            </span>`;
+        // Averages hide exactly what progressive overload is read from: whether
+        // the last set held up. The per-set numbers were already in storage and
+        // in the .FIT export, and were the one place they could not be seen.
+        // <details> so the card stays a one-liner until it is asked.
+        if (!sets.length) return `<div class="history-exercise-row">${summary}</div>`;
+        const rows = sets.map((d, i) => `
+              <tr>
+                <td>${i + 1}.</td>
+                <td>${d.reps ?? 0}&nbsp;×</td>
+                <td>${d.weight > 0 ? `${d.weight}&nbsp;kg` : 'vlastná&nbsp;váha'}</td>
+                <td>${d.rpe != null ? `RPE&nbsp;${d.rpe}` : '—'}</td>
+                <td>${d.duration ? this._fmtTime(d.duration) : '—'}</td>
+              </tr>`).join('');
+        return `
+          <details class="history-exercise">
+            <summary class="history-exercise-row">${summary}</summary>
+            <table class="history-set-table">
+              <thead><tr><th>Séria</th><th>Opak.</th><th>Váha</th><th>RPE</th><th>Čas</th></tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </details>`;
       }).join('');
 
       const card = document.createElement('div');
@@ -1612,13 +2185,21 @@ class App {
 
     // Subtitle: "Set 1 of 3 · 12 reps" — visible without looking away from camera
     if (this.workout.subtitle) {
-      this.workout.subtitle.textContent = `Séria ${this.currentSet} z ${this.targetSets} · ${this.targetReps} opakovaní`;
+      this.workout.subtitle.textContent = `Séria ${this.currentSet} z ${this.targetSets} · ${this.targetReps} opakovaní`
+        + (this.counter?.calibrated ? ' · 📐 kalibrované' : '');
     }
 
     // "Next Set" → "Finish ▶" on the last set so users know it leads to completion
     if (this.workout.btnNext) {
-      const isLast = this.currentSet >= this.targetSets;
-      this.workout.btnNext.textContent = isLast ? 'Dokončiť ▶' : 'Ďalšia séria ▶';
+      // On the last set of a plan exercise that is not the last exercise, this
+      // button starts the NEXT EXERCISE. Labelling it "Dokončiť" made it read
+      // as the end of the workout — the one label a user must be able to trust
+      // before tapping.
+      const lastSet = this.currentSet >= this.targetSets;
+      const lastEx  = !this.isRunningPlan || this.planIndex >= this.workoutPlan.length - 1;
+      this.workout.btnNext.textContent = !lastSet ? 'Ďalšia séria ▶'
+                                       : lastEx   ? 'Dokončiť ▶'
+                                                  : 'Ďalší cvik ▶';
     }
 
     if (this.workout.cameraHint) this.workout.cameraHint.textContent = ex?.cameraHint || '';
@@ -1673,8 +2254,18 @@ class App {
     w.setDisplay.textContent   = `${this.currentSet} / ${this.targetSets}`;
     w.repDisplay.textContent   = `${reps} / ${this.targetReps}`;
 
-    const setProgress     = Math.min(reps / this.targetReps, 1);
-    const overallProgress = Math.min(((this.currentSet - 1) * this.targetReps + reps) / (this.targetSets * this.targetReps), 1);
+    const setProgress = Math.min(reps / this.targetReps, 1);
+    // "Celkový postup" has to mean the whole session. During a plan it measured
+    // only the exercise on screen, so a six-exercise workout drove the bar to
+    // 100% six separate times and it said nothing about how much was left.
+    const exerciseProgress = Math.min(((this.currentSet - 1) + setProgress) / this.targetSets, 1);
+    let overallProgress    = exerciseProgress;
+    if (this.isRunningPlan && this.workoutPlan.length) {
+      const totalSets = this.workoutPlan.reduce((n, it) => n + (it.sets || 0), 0) || 1;
+      const before    = this.workoutPlan.slice(0, this.planIndex)
+                            .reduce((n, it) => n + (it.sets || 0), 0);
+      overallProgress = Math.min((before + (this.currentSet - 1) + setProgress) / totalSets, 1);
+    }
     w.barSet.style.width     = `${setProgress * 100}%`;
     w.barOverall.style.width = `${overallProgress * 100}%`;
     w.pctSet.textContent     = `${Math.round(setProgress * 100)}%`;
@@ -1774,6 +2365,10 @@ class App {
   _updateQualityBadge(quality) {
     const badge = this.workout.qualityBadge;
     if (!badge) return;
+    // The frame rate is part of the signal quality, not a developer statistic:
+    // when it collapses, so does counting, and the user is the only one who can
+    // do anything about it (close other apps, better light, move the phone).
+    const fps = this._fps >= 1 ? ` · ${Math.round(this._fps)} fps` : '';
     const map = {
       good:   { text: '● Dobrý signál',  cls: 'good' },
       fair:   { text: '● Slabší signál',  cls: 'fair' },
@@ -1782,8 +2377,9 @@ class App {
       manual: { text: '✋ Ručný režim',   cls: 'none' },
     };
     const info = map[quality] || map.none;
-    badge.textContent = info.text;
-    badge.className   = `quality-badge ${info.cls}`;
+    const slow = this._fps >= 1 && this._fps < FPS_LOW_THRESHOLD;
+    badge.textContent = info.text + fps;
+    badge.className   = `quality-badge ${slow ? 'poor' : info.cls}`;
 
     // Promote tap-to-count button when camera detection is unreliable
     const tapBtn = this.workout.btnTapCount;
